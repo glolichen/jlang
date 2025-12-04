@@ -1,7 +1,7 @@
 #ifndef LEX_HPP
 #define LEX_HPP
 
-#include <codecvt>
+#include <iostream>
 #include <variant>
 #include <sstream>
 #include <string>
@@ -109,6 +109,13 @@ namespace lex {
 		std::variant<std::monostate, int, std::string> literal;
 		std::string str;
 		int line;
+
+		Token(TokenType type, std::string str, int line) {
+			this->type = type;
+			literal = std::monostate();
+			this->str = str;
+			this->line = line;
+		}
 
 		std::string to_string() {
 			std::stringstream ss;

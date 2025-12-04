@@ -59,24 +59,26 @@ static const size_t max_delim_len = get_longest_key(DELIMS);
 static lex::ScanError scan_line(int line_num, std::vector<lex::Token> &tokens, const std::string &line) {
 	size_t start = 0;
 	for (size_t i = 0; i < line.size(); i++) {
-		for (size_t j = 1; j <= max_delim_len && j <= line.size() - i; j++) {
+		for (size_t j = std::min(max_delim_len, line.size() - i); j >= 1; j--) {
 			std::string delim = line.substr(i, j);
 			auto delim_it = DELIMS.find(delim);
 			if (delim_it == DELIMS.end())
 				continue;
-			
+
 			if (start != i) {
 				std::string prev_token = line.substr(start, i - start);
 				auto kw_it = KEYWORDS.find(prev_token);
 				lex::TokenType type = kw_it == KEYWORDS.end() ? lex::IDENTIFIER : kw_it->second;
-				tokens.push_back(lex::Token { type, std::monostate {}, prev_token, line_num });
+				tokens.push_back(lex::Token(type, prev_token, line_num));
 			}
 
 			if (delim_it->second != lex::NOTHING)
-				tokens.push_back(lex::Token { delim_it->second, std::monostate {}, delim, line_num });
+				tokens.push_back(lex::Token(delim_it->second, delim, line_num));
 
-			start = i + 1;
+			start = i + j;
 			i += j - 1;
+
+			break;
 		}
 	}
 

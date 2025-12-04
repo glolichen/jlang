@@ -6,11 +6,15 @@
 #include "parse.hpp"
 #include "ast.hpp"
 
+static std::vector<lex::Token>::const_iterator first_token;
 static std::vector<lex::Token>::const_iterator cur;
 
 // move onto the next lexeme
 static void next() {
-	cur++;
+	cur = std::next(cur);
+}
+static void set_token(int index) {
+	cur = std::next(first_token, index);
 }
 
 // check if current lexeme is OK (in the list)
@@ -55,7 +59,7 @@ static void factor(ast::Node &node) {
 
 static void term(ast::Node &node) {
 	factor(node.insert_node(ast::NODE_FACTOR));
-	while (cur->type == lex::STAR || cur->type == lex::SLASH) {
+	while (is_type({ lex::STAR, lex::SLASH })) {
 		node.insert_leaf(*cur);
 		next();
 		factor(node.insert_node(ast::NODE_FACTOR));
@@ -63,22 +67,54 @@ static void term(ast::Node &node) {
 }
 
 static void expression(ast::Node &node) {
-	if (cur->type == lex::PLUS || cur->type == lex::MINUS)
+	if (is_type({ lex::PLUS, lex::MINUS })) {
+		node.insert_leaf(*cur);
 		next();
+	}
 	term(node.insert_node(ast::NODE_TERM));
-	while (cur->type == lex::PLUS || cur->type == lex::MINUS) {
+	while (is_type({ lex::PLUS, lex::MINUS })) {
 		node.insert_leaf(*cur);
 		next();
 		term(node.insert_node(ast::NODE_TERM));
 	}
 }
 
+static void condition(ast::Node &node) {
+	expression(node.insert_node(ast::NODE_EXPR));
+	if (expect({
+		lex::EQUAL_EQUAL, lex::BANG_EQUAL,
+		lex::LESS, lex::LESS_EQUAL,
+		lex::GREATER, lex::GREATER_EQUAL
+	})) {
+		node.insert_leaf(*cur);
+		next();
+		expression(node.insert_node(ast::NODE_EXPR));
+	}
+}
+
+// static bool assignment(ast::Node &node) {
+// 	if (!is_type(lex::IDENTIFIER))
+// 		return false;
+//
+// 	node.insert_leaf(*cur);
+// 	next();
+//
+// 	if (is_type({ lex::PLUS, lex::MINUS }))
+// 		next();
+// 	term(node.insert_node(ast::NODE_TERM));
+// 	while (is_type({ lex::PLUS, lex::MINUS })) {
+// 		node.insert_leaf(*cur);
+// 		next();
+// 		term(node.insert_node(ast::NODE_TERM));
+// 	}
+// }
+
 static void goal(ast::Node &node) {
-	expression(node);
+	condition(node);
 }
 
 void parse::parse(const std::vector<lex::Token> &tokens, ast::Node &root) {
-	cur = tokens.begin();
+	first_token = tokens.begin(), cur = tokens.begin();
 	goal(root);
 }
 

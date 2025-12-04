@@ -1,6 +1,7 @@
 #ifndef AST_HPP
 #define AST_HPP
 
+#include <stdexcept>
 #include <vector>
 #include "lex.hpp"
 
@@ -30,12 +31,20 @@ namespace ast {
 		// TODO: Safety -- if current node type is terminal, do not allow this
 		// if adding node type is terminal, use insert_leaf instead
 		Node &insert_node(NodeType type) {
+			if (this->type == NODE_LEAF)
+				throw std::invalid_argument("Cannot insert a node under a terminal");
+			if (type == NODE_LEAF)
+				throw std::invalid_argument("Use insert_leaf to insert terminal symbols");
+
 			std::vector<Node> &children = std::get<std::vector<Node>>(children_or_value);
 			children.emplace_back(Node(type));
 			return children[children.size() - 1];
 		}
 		
 		Node &insert_leaf(const lex::Token &t) {
+			if (this->type == NODE_LEAF)
+				throw std::invalid_argument("Cannot insert a node under a terminal");
+
 			Node new_node = Node(NODE_LEAF);
 			new_node.children_or_value = t;
 
