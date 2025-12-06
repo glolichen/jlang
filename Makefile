@@ -1,8 +1,10 @@
 CC=clang
-CFLAGS=-I. -Wall -Wextra -g --debug
-# CFLAGS=-I. -Wall -Wextra -g -O3 -fsanitize=address,undefined -static-libasan
+CFLAGS=-I. -Wall -Wextra -g --debug \
+	   -fsanitize=address,undefined -static-libasan
+#
+# CFLAGS=-I. -Wall -Wextra -g -O3 
 
-OBJ = main.o lex.o
+OBJ = main.o lex.o ast.o parse.o
 
 build: $(OBJ) 
 	$(CC) -o jlang $^ $(CFLAGS)

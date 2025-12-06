@@ -3,19 +3,19 @@
 Compiler for an extremely minimal C-like language.
 
 ```
-statement ::= assignment
+<statement> ::= <assignment>;
 
-assignment ::= identifier "=" expression
+<assignment> ::= identifier "=" <expression>
 
-condition ::= <expression> ("=="|"!="|"<"|"<="|">"|">=") <expression>
+TODO <condition> ::= <expression> ("=="|"!="|"<"|"<="|">"|">=") <expression>
 
-expression ::= ["+"|"-"] <term>
-            |  ["+"|"-"] <term> ("+"|"-") <term>
+<expression> ::= ["+"|"-"] <term>
+              |  ["+"|"-"] <term> ("+"|"-") <term>
 
-term ::= <factor>
-      |  <factor> ("*"|"/") <factor>
+<term> ::= <factor>
+        |  <factor> ("*"|"/") <factor>
 
-factor ::= identifier
-        |  number
-        |  "(" <expression> ")"
+<factor> ::= identifier
+          |  number
+          |  "(" <expression> ")"
 ```

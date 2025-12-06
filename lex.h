@@ -22,14 +22,10 @@ enum lex_token_type {
 
 	LEX_INT, LEX_CHAR,
 
-	LEX_NOTHING
+	LEX_NOTHING,
 };
+const char *lex_token_type_to_str(enum lex_token_type type);
 
-enum lex_token_literal_type {
-	TOKEN_LITERAL_NONE,
-	TOKEN_LITERAL_NUMBER,
-	TOKEN_LITERAL_STRING,
-};
 union lex_token_literal {
 	int number;
 	const char *string;
@@ -37,10 +33,7 @@ union lex_token_literal {
 
 struct lex_token {
 	enum lex_token_type type;
-
-	enum lex_token_literal_type literal_type;
 	union lex_token_literal literal;
-
 	const char *str;
 	int line;
 };
@@ -55,8 +48,10 @@ struct lex_scan_error {
 	int line;
 };
 
+struct lex_token lex_new_token(enum lex_token_type type, const char *str, int line);
+void lex_free_token(struct lex_token *token);
+
 struct lex_token_list lex_new_token_list(void);
-void lex_token_list_append(struct lex_token_list *list, struct lex_token token);
 void lex_free_token_list(struct lex_token_list *list);
 
 struct lex_scan_error lex_scan(size_t num_lines, const char **lines, const size_t *line_lens, struct lex_token_list *token_list);

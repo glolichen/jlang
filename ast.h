@@ -1,59 +1,44 @@
-#ifndef AST_HPP
-#define AST_HPP
+#ifndef AST_H
+#define AST_H
 
-#include <stdexcept>
-#include <vector>
-#include "lex.hpp"
+#include "lex.h"
 
-namespace ast {
-	enum NodeType {
-		NODE_ROOT,
-		NODE_EXPR,
-		NODE_TERM,
-		NODE_FACTOR,
-		NODE_LEAF,
-	};
-	struct Node {
-		NodeType type;
+enum ast_node_type {
+	AST_ROOT,
+	AST_EXPR,
+	AST_TERM,
+	AST_FACTOR,
+	AST_LEAF,
+	AST_ASSIGN,
+};
+struct ast_node_list {
+	struct ast_node *l;
+	size_t size, capacity;
+};
+union ast_node_value {
+	struct ast_node_list children;
+	struct lex_token token;
+};
+struct ast_node {
+	enum ast_node_type type;
 
-		// terminals are lex::Token, nonterminals are Node
-		// i.e. if type is NODE_TERMINAL, then "children" is lex::Token
-		// if not, then it is a vector of child nodes
-		std::variant<std::vector<Node>, lex::Token> children_or_value;
+	// terminals are lex_token, nonterminals are list of ast_node
+	// i.e. if type is AST_LEAF, then "value" is lex_token
+	// if not, then it is a list of child nodes
+	union ast_node_value value;
+};
 
-		Node(NodeType type) {
-			this->type = type;
-		}
-		Node() {
-			this->type = NODE_ROOT;
-		}
+struct ast_node ast_new_node(enum ast_node_type type);
+void ast_free_node(struct ast_node *node);
 
-		// TODO: Safety -- if current node type is terminal, do not allow this
-		// if adding node type is terminal, use insert_leaf instead
-		Node &insert_node(NodeType type) {
-			if (this->type == NODE_LEAF)
-				throw std::invalid_argument("Cannot insert a node under a terminal");
-			if (type == NODE_LEAF)
-				throw std::invalid_argument("Use insert_leaf to insert terminal symbols");
+struct ast_node_list ast_new_node_list(void);
+void ast_node_list_append(struct ast_node_list *list, struct ast_node token);
+void ast_free_node_list(struct ast_node_list *list);
 
-			std::vector<Node> &children = std::get<std::vector<Node>>(children_or_value);
-			children.emplace_back(Node(type));
-			return children[children.size() - 1];
-		}
-		
-		Node &insert_leaf(const lex::Token &t) {
-			if (this->type == NODE_LEAF)
-				throw std::invalid_argument("Cannot insert a node under a terminal");
+size_t ast_insert_node(struct ast_node *node, enum ast_node_type type);
+size_t ast_insert_leaf(struct ast_node *node, const struct lex_token *token);
 
-			Node new_node = Node(NODE_LEAF);
-			new_node.children_or_value = t;
-
-			std::vector<Node> &children = std::get<std::vector<Node>>(children_or_value);
-			children.emplace_back(new_node);
-			return children[children.size() - 1];
-		}
-	};
-}
+void ast_print(const struct ast_node *root);
 
 #endif
 

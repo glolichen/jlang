@@ -1,12 +1,10 @@
-#ifndef PARSE_HPP
-#define	PARSE_HPP
+#ifndef PARSE_H
+#define	PARSE_H
 
-#include <vector>
-#include "lex.hpp"
-#include "ast.hpp"
+#include "lex.h"
+#include "ast.h"
 
-namespace parse {
-	void parse(const std::vector<lex::Token> &tokens, ast::Node &root);
-}
+void parse(const struct lex_token_list *tokens, struct ast_node *root);
 
 #endif
+

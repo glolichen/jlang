@@ -1,8 +1,11 @@
-#include "lex.h"
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "lex.h"
+#include "ast.h"
+#include "parse.h"
 
 size_t count_lines(FILE *file) {
 	size_t lines = 0;
@@ -28,22 +31,29 @@ int main(int argc, const char *argv[]) {
 
 	size_t num_lines = count_lines(infile);
 
-	char **lines = malloc(num_lines * sizeof(char *));
-	for (size_t i = 0; i < num_lines; i++)
+	char **lines = malloc((num_lines + 1) * sizeof(char *));
+	for (size_t i = 0; i <= num_lines; i++)
 		lines[i] = NULL;
 
 	size_t *line_lens = malloc(num_lines * sizeof(size_t));
 
-	int counter = 0;
+	size_t line_counter = 0;
 	size_t buffer_size = 0, line_length = 0;
-    while ((line_length = getline(&lines[counter], &buffer_size, infile)) != (size_t) -1)
-		line_lens[counter++] = line_length - 1;
+    while ((line_length = getline(&lines[line_counter], &buffer_size, infile)) != (size_t) -1)
+		line_lens[line_counter++] = line_length;
+
+	// note that getline will allocate a buffer even if it fails
+	// this buffer needs to be freed
+	// so we will keep track of the number of times it is called
+	// that value will be line_counter + 1
 
 	fclose(infile);
 
 	struct lex_token_list token_list = lex_new_token_list();
-	// lex::ScanError scan_error = lex_scan(lines, tokens);
 	lex_scan(num_lines, (const char **) lines, line_lens, &token_list);
+
+	// for (size_t i = 0; i < token_list.size; i++)
+	// 	lex_print_token(&token_list.l[i]);
 
 	// switch (scan_error.type) {
 	// 	case lex::SCAN_LINE_INT_OUT_OF_BOUNDS:
@@ -53,19 +63,17 @@ int main(int argc, const char *argv[]) {
 	// 		;
 	// }
 
+	struct ast_node root = ast_new_node(AST_ROOT);
+	parse(&token_list, &root);
 
-	lex_free_token_list(&token_list);
-	for (size_t i = 0; i < num_lines; i++)
+	ast_print(&root);
+
+	ast_free_node(&root);
+	// lex_free_token_list(&token_list);
+	for (size_t i = 0; i <= line_counter; i++)
 		free(lines[i]);
 	free(lines);
 	free(line_lens);
-
-	// for (lex::Token t : tokens) {
-	// 	std::cout << t.to_string() << "\n";
-	// }
-	//
-	// ast::Node root;
-	// parse::parse(tokens, root);
 
 	return 0;
 };
