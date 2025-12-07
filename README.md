@@ -9,7 +9,10 @@ Compiler for very minimal C-like language.
 
 <statement> ::= <assignment> ";"
              |  <func_call> ";"
+             |  <conditional>
              |  ";"
+
+<conditional> ::= "if" "(" <expression> ")" <statement_list> ["else" <statement_list>]
 
 <assignment> ::= identifier "=" <expression>
 
@@ -18,8 +21,7 @@ Compiler for very minimal C-like language.
 <expression_list> ::= "(" { <expression> "," } <expression> ")"
                    |  "()"
 
-<expression> ::= <expr_no_comp>
-              |  <expr_no_comp> ("=="|"!="|"<"|"<="|">"|">=") <expr_no_comp>
+<expression> ::= <expr_no_comp> [("=="|"!="|"<"|"<="|">"|">=") <expr_no_comp>]
 
 <expr_no_comp> ::= ["+"|"-"] <term> { ("+"|"-") <term> }
 
@@ -30,3 +32,15 @@ Compiler for very minimal C-like language.
           |  "(" <expression> ")"
 ```
 
+## AST Structure
+
+Didn't bother with inheritance (AST node is just a list of children).
+
+ - `EXPRESSION`: IF COMPARISON, (`EXPR_NO_COMP`, comparator, `EXPR_NO_COMP`), IF NOT, (`EXPR_NO_COMP`).
+ - `EXPR_NO_COMP`: `TERM`, plus/minus, `TERM`, plus/minus, `TERM`, etc etc.
+ - `TERM`: `FACTOR`, star/slash, `FACTOR`, star/slash, `FACTOR`, etc etc.
+ - `FACTOR`: identifier, number or `EXPRESSION`.
+ - `ASSIGN`: identifier, "=", `EXPRESSION`.
+ - `FUNC_CALL`: identifier, `EXPR_LIST` IN ALL CASES, IF PARAMS ARE VOID THEN `EXPR_LIST` LENGTH 0.
+ - `EXPR_LIST`: list of `EXPRESSION`. LENGTH 0 IF PARAMS ARE VOID.
+ - `CONDITIONAL`: `EXPRESSION`, `STMT_LIST`, (IF NO ELSE, NO MORE, IF THERE IS ELSE: `EXPRESSION`).

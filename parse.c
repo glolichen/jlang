@@ -5,7 +5,7 @@
 #include "parse.h"
 #include "ast.h"
 
-const enum lex_token_type COND_OPS[] = {
+const enum lex_token_type COMP_OPS[] = {
 	LEX_EQUAL_EQUAL, LEX_BANG_EQUAL,
 	LEX_LESS, LEX_LESS_EQUAL,
 	LEX_GREATER, LEX_GREATER_EQUAL
@@ -119,7 +119,7 @@ static void expression(struct ast_node *node) {
 	size_t new_index = ast_insert_node(node, AST_EXPR_NO_COMP);
 	expr_no_comp(&node->value.children.l[new_index]);
 
-	if (!is_types(COND_OPS, sizeof(COND_OPS) / sizeof(COND_OPS[0])))
+	if (!is_types(COMP_OPS, sizeof(COMP_OPS) / sizeof(COMP_OPS[0])))
 		return;
 	
 	ast_insert_leaf(node, get_cur());
@@ -201,6 +201,8 @@ static bool func_call(struct ast_node *node) {
 	return true;
 }
 
+static bool conditional(struct ast_node *node);
+
 static bool statement(struct ast_node *node) {
 	if (is_type(LEX_SEMICOLON)) {
 		next();
@@ -217,6 +219,12 @@ static bool statement(struct ast_node *node) {
 	ast_remove_node(node, new_index);
 	new_index = ast_insert_node(node, AST_FUNC_CALL);
 	if (func_call(&node->value.children.l[new_index]))
+		return true;
+
+	set_token(start_index);
+	ast_remove_node(node, new_index);
+	new_index = ast_insert_node(node, AST_CONDITIONAL);
+	if (conditional(&node->value.children.l[new_index]))
 		return true;
 
 	return false;
@@ -240,6 +248,36 @@ static bool statement_list(struct ast_node *node) {
 	next();
 
 	return true;
+}
+
+static bool conditional(struct ast_node *node) {
+	if (!is_type(LEX_IF))
+		return false;
+
+	next();
+
+	expect(LEX_LEFT_PAREN);
+	next();
+
+	size_t new_index = ast_insert_node(node, AST_EXPR);
+	expression(&node->value.children.l[new_index]);
+
+	expect(LEX_RIGHT_PAREN);
+	next();
+
+	new_index = ast_insert_node(node, AST_STMT_LIST);
+	if (!statement_list(&node->value.children.l[new_index]))
+		return false;
+
+	if (is_type(LEX_ELSE)) {
+		next();
+		new_index = ast_insert_node(node, AST_STMT_LIST);
+		if (!statement_list(&node->value.children.l[new_index]))
+			return false;
+	}
+
+	return true;
+
 }
 
 static void goal(struct ast_node *node) {
