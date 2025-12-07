@@ -9,7 +9,7 @@ OBJ = main.o lex.o ast.o parse.o
 build: $(OBJ) 
 	$(CC) -o jlang $^ $(CFLAGS)
 
-%.o: %.cpp
+%.o: %.c
 	$(CC) -c -o $@ $< $(CFLAGS)
 
 clean:

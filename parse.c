@@ -5,6 +5,12 @@
 #include "parse.h"
 #include "ast.h"
 
+const enum lex_token_type COND_OPS[] = {
+	LEX_EQUAL_EQUAL, LEX_BANG_EQUAL,
+	LEX_LESS, LEX_LESS_EQUAL,
+	LEX_GREATER, LEX_GREATER_EQUAL
+};
+
 struct lex_token_list token_list;
 size_t current_index = 0;
 
@@ -18,7 +24,7 @@ static void prev() {
 static void set_token(int index) {
 	current_index = index;
 }
-static struct lex_token *get_cur(void) {
+static const struct lex_token *get_cur(void) {
 	return &token_list.l[current_index];
 }
 
@@ -26,16 +32,26 @@ static struct lex_token *get_cur(void) {
 static bool is_type(enum lex_token_type type) {
 	return token_list.l[current_index].type == type;
 }
-// same as accept but will error on failure
-static bool expects(const enum lex_token_type *type, size_t amount) {
+static bool is_types(const enum lex_token_type *type, size_t amount) {
 	enum lex_token_type cur_type = token_list.l[current_index].type;
 	for (size_t i = 0; i < amount; i++) {
 		if (cur_type == type[i])
 			return true;
 	}
-	fprintf(stderr, "ERROR! (1)\n");
 	return false;
 }
+
+
+// same as accept but will error on failure
+// static bool expects(const enum lex_token_type *type, size_t amount) {
+// 	enum lex_token_type cur_type = token_list.l[current_index].type;
+// 	for (size_t i = 0; i < amount; i++) {
+// 		if (cur_type == type[i])
+// 			return true;
+// 	}
+// 	fprintf(stderr, "ERROR! (1)\n");
+// 	return false;
+// }
 static bool expect(enum lex_token_type type) {
 	if (is_type(type))
 		return true;
@@ -43,6 +59,7 @@ static bool expect(enum lex_token_type type) {
 	return false;
 }
 
+static void expr_no_comp(struct ast_node *node);
 static void expression(struct ast_node *node);
 
 static void factor(struct ast_node *node) {
@@ -80,7 +97,7 @@ static void term(struct ast_node *node) {
 	}
 }
 
-static void expression(struct ast_node *node) {
+static void expr_no_comp(struct ast_node *node) {
 	if (is_type(LEX_PLUS) || is_type(LEX_MINUS)) {
 		ast_insert_leaf(node, get_cur());
 		next();
@@ -98,24 +115,48 @@ static void expression(struct ast_node *node) {
 	}
 }
 
-// static void condition(struct ast_node *node) {
-// 	size_t new_index = ast_insert_node(node, AST_EXPR);
-// 	expression(&node->value.children.l[new_index]);
-//
-// 	enum lex_token_type acceptable[] = {
-// 		LEX_EQUAL_EQUAL, LEX_BANG_EQUAL,
-// 		LEX_LESS, LEX_LESS_EQUAL,
-// 		LEX_GREATER, LEX_GREATER_EQUAL
-// 	};
-//
-// 	if (expects(acceptable, sizeof(acceptable) / sizeof(acceptable[0]))) {
-// 		ast_insert_leaf(node, get_cur());
-// 		next();
-//
-// 		new_index = ast_insert_node(node, AST_EXPR);
-// 		expression(&node->value.children.l[new_index]);
-// 	}
-// }
+static void expression(struct ast_node *node) {
+	size_t new_index = ast_insert_node(node, AST_EXPR_NO_COMP);
+	expr_no_comp(&node->value.children.l[new_index]);
+
+	if (!is_types(COND_OPS, sizeof(COND_OPS) / sizeof(COND_OPS[0])))
+		return;
+	
+	ast_insert_leaf(node, get_cur());
+	next();
+
+	new_index = ast_insert_node(node, AST_EXPR_NO_COMP);
+	expr_no_comp(&node->value.children.l[new_index]);
+}
+
+static bool expression_list(struct ast_node *node) {
+	if (!is_type(LEX_LEFT_PAREN))
+		return false;
+
+	next();
+	if (is_type(LEX_RIGHT_PAREN)) {
+		next();
+		return true;
+	}
+
+	size_t new_index;
+	while (true) {
+		new_index = ast_insert_node(node, AST_EXPR);
+		expression(&node->value.children.l[new_index]);
+
+		if (is_type(LEX_RIGHT_PAREN)) {
+			next();
+			return true;
+		}
+
+		if (!expect(LEX_COMMA))
+			break;
+		next();
+	}
+
+	return false;
+}
+
 
 static bool assignment(struct ast_node *node) {
 	// 1 token lookahead, ensure after identifier is equal character
@@ -141,12 +182,74 @@ static bool assignment(struct ast_node *node) {
 	return true;
 }
 
-static void goal(struct ast_node *node) {
+static bool func_call(struct ast_node *node) {
+	if (!is_type(LEX_IDENTIFIER))
+		return false;
+
+	ast_insert_leaf(node, get_cur());
+	next();
+
+	size_t new_index = ast_insert_node(node, AST_EXPR_LIST);
+	if (!expression_list(&node->value.children.l[new_index])) {
+		fprintf(stderr, "ERROR! (3)\n");
+		return false;
+	}
+
+	expect(LEX_SEMICOLON);
+	next();
+
+	return true;
+}
+
+static bool statement(struct ast_node *node) {
+	if (is_type(LEX_SEMICOLON)) {
+		next();
+		return true;
+	}
+
+	size_t start_index = current_index;
+
 	size_t new_index = ast_insert_node(node, AST_ASSIGN);
-	bool ok = assignment(&node->value.children.l[new_index]);
+	if (assignment(&node->value.children.l[new_index]))
+		return true;
+
+	set_token(start_index);
+	ast_remove_node(node, new_index);
+	new_index = ast_insert_node(node, AST_FUNC_CALL);
+	if (func_call(&node->value.children.l[new_index]))
+		return true;
+
+	return false;
+}
+
+static bool statement_list(struct ast_node *node) {
+	// TODO: consider empty statements ({})
+	if (!is_type(LEX_LEFT_BRACE))
+		return false;
+
+	next();
+
+	size_t new_index;
+	do {
+		new_index = ast_insert_node(node, AST_STMT);
+	}
+	while (statement(&node->value.children.l[new_index]));
+	ast_remove_node(node, new_index);
+
+	expect(LEX_RIGHT_BRACE);
+	next();
+
+	return true;
+}
+
+static void goal(struct ast_node *node) {
+	size_t new_index = ast_insert_node(node, AST_STMT_LIST);
+	bool ok = statement_list(&node->value.children.l[new_index]);
+
+	// size_t new_index = ast_insert_node(node, AST_EXPR);
+	// expression(&node->value.children.l[new_index]);
 
 	printf("success? %u\n", ok);
-	// expression(node);
 }
 
 void parse(const struct lex_token_list *tokens, struct ast_node *root) {

@@ -1,15 +1,21 @@
 #ifndef AST_H
 #define AST_H
 
+#include <stdbool.h>
 #include "lex.h"
 
 enum ast_node_type {
 	AST_ROOT,
+	AST_EXPR_NO_COMP,
 	AST_EXPR,
+	AST_EXPR_LIST,
 	AST_TERM,
 	AST_FACTOR,
 	AST_LEAF,
+	AST_STMT,
+	AST_STMT_LIST,
 	AST_ASSIGN,
+	AST_FUNC_CALL,
 };
 struct ast_node_list {
 	struct ast_node *l;
@@ -37,6 +43,8 @@ void ast_free_node_list(struct ast_node_list *list);
 
 size_t ast_insert_node(struct ast_node *node, enum ast_node_type type);
 size_t ast_insert_leaf(struct ast_node *node, const struct lex_token *token);
+
+bool ast_remove_node(struct ast_node *node, size_t index);
 
 void ast_print(const struct ast_node *root);
 

@@ -1,21 +1,32 @@
-### JLang
+# JLang
 
-Compiler for an extremely minimal C-like language.
+Compiler for very minimal C-like language.
+
+## Grammar
 
 ```
-<statement> ::= <assignment>;
+<statement_list> | "{" { <statement> } "}"
+
+<statement> ::= <assignment> ";"
+             |  <func_call> ";"
+             |  ";"
 
 <assignment> ::= identifier "=" <expression>
 
-TODO <condition> ::= <expression> ("=="|"!="|"<"|"<="|">"|">=") <expression>
+<func_call> ::= identifier <expression_list>
 
-<expression> ::= ["+"|"-"] <term>
-              |  ["+"|"-"] <term> ("+"|"-") <term>
+<expression_list> ::= "(" { <expression> "," } <expression> ")"
+                   |  "()"
 
-<term> ::= <factor>
-        |  <factor> ("*"|"/") <factor>
+<expression> ::= <expr_no_comp>
+              |  <expr_no_comp> ("=="|"!="|"<"|"<="|">"|">=") <expr_no_comp>
+
+<expr_no_comp> ::= ["+"|"-"] <term> { ("+"|"-") <term> }
+
+<term> ::= <factor> { ("*"|"/") <factor> }
 
 <factor> ::= identifier
           |  number
           |  "(" <expression> ")"
 ```
+

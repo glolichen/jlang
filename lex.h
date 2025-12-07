@@ -24,6 +24,7 @@ enum lex_token_type {
 
 	LEX_NOTHING,
 };
+
 const char *lex_token_type_to_str(enum lex_token_type type);
 
 union lex_token_literal {
