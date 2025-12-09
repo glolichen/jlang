@@ -36,7 +36,7 @@ struct lex_token {
 	enum lex_token_type type;
 	union lex_token_literal literal;
 	const char *str;
-	int line;
+	size_t line;
 };
 
 struct lex_token_list {
@@ -46,7 +46,7 @@ struct lex_token_list {
 
 struct lex_scan_error {
 	const char *msg;
-	int line;
+	size_t line;
 };
 
 struct lex_token lex_new_token(enum lex_token_type type, const char *str, int line);

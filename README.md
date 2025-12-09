@@ -1,6 +1,6 @@
 # JLang
 
-Compiler for very minimal C-like language.
+Compiler for very minimal C-like language. Compiles to LLVM IR.
 
 ## Grammar
 

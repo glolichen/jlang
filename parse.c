@@ -5,14 +5,19 @@
 #include "parse.h"
 #include "ast.h"
 
-const enum lex_token_type COMP_OPS[] = {
+#include "setjmp.h"
+
+jmp_buf error_buf;
+
+static const enum lex_token_type COMP_OPS[] = {
 	LEX_EQUAL_EQUAL, LEX_BANG_EQUAL,
 	LEX_LESS, LEX_LESS_EQUAL,
 	LEX_GREATER, LEX_GREATER_EQUAL
 };
 
-struct lex_token_list token_list;
-size_t current_index = 0;
+static const char **line_list;
+static struct lex_token_list token_list;
+static size_t current_index = 0;
 
 // move onto the next lexeme
 static void next() {
@@ -26,6 +31,20 @@ static void set_token(int index) {
 }
 static const struct lex_token *get_cur(void) {
 	return &token_list.l[current_index];
+}
+
+static void print_cur_no_prefix(FILE *out) {
+	size_t line_num = get_cur()->line - 1;
+	const char *line = line_list[line_num];
+	size_t i = 0;
+	while (true) {
+		if (line[i] == 0)
+			break;
+		if (line[i] != ' ' && line[i] != '\t')
+			break;
+		i++;
+	}
+	fprintf(out, "%s\n", line + i);
 }
 
 // check if current lexeme is OK (in the list)
@@ -52,11 +71,21 @@ static bool is_types(const enum lex_token_type *type, size_t amount) {
 // 	fprintf(stderr, "ERROR! (1)\n");
 // 	return false;
 // }
+
 static bool expect(enum lex_token_type type) {
 	if (is_type(type))
 		return true;
-	fprintf(stderr, "ERROR! (1)\n");
-	return false;
+
+	const struct lex_token *token = get_cur();
+	fprintf(
+		stderr,
+		"[ERROR] expected %s, got %s\n",
+		lex_token_type_to_str(type),
+		lex_token_type_to_str(token->type)
+	);
+	fprintf(stderr, "line %zu: ", token->line);
+	print_cur_no_prefix(stderr);
+	longjmp(error_buf, 1);
 }
 
 static void expr_no_comp(struct ast_node *node);
@@ -82,7 +111,11 @@ static void factor(struct ast_node *node) {
 
 		return;
 	}
-	fprintf(stderr, "ERROR! (2)\n");
+
+	fprintf(stderr, "[ERROR] invalid expression\n");
+	fprintf(stderr, "line %zu: ", get_cur()->line);
+	print_cur_no_prefix(stderr);
+	longjmp(error_buf, 1);
 }
 
 static void term(struct ast_node *node) {
@@ -191,8 +224,10 @@ static bool func_call(struct ast_node *node) {
 
 	size_t new_index = ast_insert_node(node, AST_EXPR_LIST);
 	if (!expression_list(&node->value.children.l[new_index])) {
-		fprintf(stderr, "ERROR! (3)\n");
-		return false;
+		fprintf(stderr, "[ERROR] expected expression list in function call\n");
+		fprintf(stderr, "line %zu: ", get_cur()->line);
+		print_cur_no_prefix(stderr);
+		longjmp(error_buf, 1);
 	}
 
 	expect(LEX_SEMICOLON);
@@ -290,9 +325,14 @@ static void goal(struct ast_node *node) {
 	printf("success? %u\n", ok);
 }
 
-void parse(const struct lex_token_list *tokens, struct ast_node *root) {
-	token_list = *tokens;
+bool parse(const struct lex_token_list *tokens, const char **lines, struct ast_node *root) {
 	current_index = 0;
-	goal(root);
+	token_list = *tokens, line_list = lines;
+    if (!setjmp(error_buf)) {
+		goal(root);
+		return true;
+	}
+    else
+		return false;
 }
 

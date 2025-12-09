@@ -4,7 +4,7 @@
 #include "lex.h"
 #include "ast.h"
 
-void parse(const struct lex_token_list *tokens, struct ast_node *root);
+bool parse(const struct lex_token_list *tokens, const char **lines, struct ast_node *root);
 
 #endif
 

@@ -64,12 +64,14 @@ int main(int argc, const char *argv[]) {
 	// }
 
 	struct ast_node root = ast_new_node(AST_ROOT);
-	parse(&token_list, &root);
+	bool ok = parse(&token_list, (const char **) lines, &root);
 
-	ast_print(&root);
+	if (ok)
+		ast_print(&root);
 
 	ast_free_node(&root);
 	// lex_free_token_list(&token_list);
+
 	for (size_t i = 0; i <= line_counter; i++)
 		free(lines[i]);
 	free(lines);
