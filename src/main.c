@@ -6,6 +6,7 @@
 #include "lex.h"
 #include "ast.h"
 #include "parse.h"
+#include "codegen.h"
 
 size_t count_lines(FILE *file) {
 	size_t lines = 0;
@@ -15,6 +16,24 @@ size_t count_lines(FILE *file) {
 	}
 	rewind(file);
 	return lines;
+}
+
+char *get_module_name(const char *filename) {
+	size_t len = strlen(filename);
+
+	size_t mod_name_len = len;
+	for (size_t i = len; i >= 1; i--) {
+		if (filename[i - 1] == '.') {
+			mod_name_len = i - 1;
+			break;
+		}
+	}
+
+	char *module_name = malloc((mod_name_len + 1) * sizeof(char));
+	strncpy(module_name, filename, mod_name_len);
+	module_name[mod_name_len] = 0;
+
+	return module_name;
 }
 
 int main(int argc, const char *argv[]) {
@@ -66,8 +85,13 @@ int main(int argc, const char *argv[]) {
 	struct ast_node root = ast_new_node(AST_ROOT);
 	bool ok = parse(&token_list, (const char **) lines, &root);
 
-	if (ok)
+	if (ok) {
 		ast_print(&root);
+
+		char *module_name = get_module_name(argv[1]);
+		codegen(module_name, &root);
+		free(module_name);
+	}
 
 	ast_free_node(&root);
 	// lex_free_token_list(&token_list);

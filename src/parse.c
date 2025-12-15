@@ -49,9 +49,13 @@ static void print_cur_no_prefix(FILE *out) {
 
 // check if current lexeme is OK (in the list)
 static bool is_type(enum lex_token_type type) {
+	if (current_index >= token_list.size)
+		return false;
 	return token_list.l[current_index].type == type;
 }
 static bool is_types(const enum lex_token_type *type, size_t amount) {
+	if (current_index >= token_list.size)
+		return false;
 	enum lex_token_type cur_type = token_list.l[current_index].type;
 	for (size_t i = 0; i < amount; i++) {
 		if (cur_type == type[i])
@@ -79,9 +83,10 @@ static bool expect(enum lex_token_type type) {
 	const struct lex_token *token = get_cur();
 	fprintf(
 		stderr,
-		"[ERROR] expected %s, got %s\n",
+		"[ERROR] expected %s, got %s (\"%s\")\n",
 		lex_token_type_to_str(type),
-		lex_token_type_to_str(token->type)
+		lex_token_type_to_str(token->type),
+		token->str
 	);
 	fprintf(stderr, "line %zu: ", token->line);
 	print_cur_no_prefix(stderr);
@@ -98,14 +103,12 @@ static void factor(struct ast_node *node) {
 		return;
 	}
 	if (is_type(LEX_LEFT_PAREN)) {
-		ast_insert_leaf(node, get_cur());
 		next();
 
 		size_t new_index = ast_insert_node(node, AST_EXPR);
 		expression(&node->value.children.l[new_index]);
 
 		expect(LEX_RIGHT_PAREN);
-		ast_insert_leaf(node, get_cur());
 
 		next();
 
@@ -316,13 +319,27 @@ static bool conditional(struct ast_node *node) {
 }
 
 static void goal(struct ast_node *node) {
-	size_t new_index = ast_insert_node(node, AST_STMT_LIST);
-	bool ok = statement_list(&node->value.children.l[new_index]);
+	// size_t new_index = ast_insert_node(node, AST_STMT_LIST);
+	// bool ok = statement_list(&node->value.children.l[new_index]);
+
+	// size_t new_index = ast_insert_node(node, AST_TERM);
+	// term(&node->value.children.l[new_index]);
+
+	// size_t new_index = ast_insert_node(node, AST_FACTOR);
+	// factor(&node->value.children.l[new_index]);
+
+	// size_t new_index = ast_insert_node(node, AST_EXPR_NO_COMP);
+	// expr_no_comp(&node->value.children.l[new_index]);
+
+	size_t new_index = ast_insert_node(node, AST_EXPR);
+	expression(&node->value.children.l[new_index]);
+
+
 
 	// size_t new_index = ast_insert_node(node, AST_EXPR);
 	// expression(&node->value.children.l[new_index]);
 
-	printf("success? %u\n", ok);
+	// printf("success? %u\n", ok);
 }
 
 bool parse(const struct lex_token_list *tokens, const char **lines, struct ast_node *root) {

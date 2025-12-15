@@ -44,3 +44,8 @@ Didn't bother with inheritance (AST node is just a list of children).
  - `FUNC_CALL`: identifier, `EXPR_LIST` IN ALL CASES, IF PARAMS ARE VOID THEN `EXPR_LIST` LENGTH 0.
  - `EXPR_LIST`: list of `EXPRESSION`. LENGTH 0 IF PARAMS ARE VOID.
  - `CONDITIONAL`: `EXPRESSION`, `STMT_LIST`, (IF NO ELSE, NO MORE, IF THERE IS ELSE: `EXPRESSION`).
+
+## LLVM
+
+ - https://www.owenstephens.co.uk/blog/2018/09/25/getting-started-with-the-newer-llvm-c-api.html
+ - https://pauladamsmith.com/blog/2015/01/how-to-get-started-with-llvm-c-api.html   

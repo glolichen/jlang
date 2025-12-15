@@ -294,5 +294,5 @@ void lex_print_token(const struct lex_token *token) {
 		printf("%s", token->literal.string);
 	else
 		printf("[none]");
-	printf(", str = \"%s\", line = %d }\n", token->str, token->line);
+	printf(", str = \"%s\", line = %zu }\n", token->str, token->line);
 }
