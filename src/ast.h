@@ -16,7 +16,8 @@ enum ast_node_type {
 	AST_STMT_LIST,
 	AST_ASSIGN,
 	AST_FUNC_CALL,
-	AST_CONDITIONAL
+	AST_CONDITIONAL,
+	AST_RETURN
 };
 struct ast_node_list {
 	struct ast_node *l;

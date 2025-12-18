@@ -205,8 +205,8 @@ static bool assignment(struct ast_node *node) {
 	// move back
 	prev();
 	ast_insert_leaf(node, get_cur());
+
 	next();
-	ast_insert_leaf(node, get_cur());
 	next();
 
 	size_t new_index = ast_insert_node(node, AST_EXPR);
@@ -239,6 +239,21 @@ static bool func_call(struct ast_node *node) {
 	return true;
 }
 
+static bool parse_return(struct ast_node *node) {
+	if (!is_type(LEX_RETURN))
+		return false;
+
+	next();
+
+	size_t new_index = ast_insert_node(node, AST_EXPR);
+	expression(&node->value.children.l[new_index]);
+
+	expect(LEX_SEMICOLON);
+	next();
+
+	return true;
+}
+
 static bool conditional(struct ast_node *node);
 
 static bool statement(struct ast_node *node) {
@@ -263,6 +278,12 @@ static bool statement(struct ast_node *node) {
 	ast_remove_node(node, new_index);
 	new_index = ast_insert_node(node, AST_CONDITIONAL);
 	if (conditional(&node->value.children.l[new_index]))
+		return true;
+
+	set_token(start_index);
+	ast_remove_node(node, new_index);
+	new_index = ast_insert_node(node, AST_RETURN);
+	if (parse_return(&node->value.children.l[new_index]))
 		return true;
 
 	return false;
@@ -315,31 +336,16 @@ static bool conditional(struct ast_node *node) {
 	}
 
 	return true;
-
 }
 
 static void goal(struct ast_node *node) {
-	// size_t new_index = ast_insert_node(node, AST_STMT_LIST);
-	// bool ok = statement_list(&node->value.children.l[new_index]);
-
-	// size_t new_index = ast_insert_node(node, AST_TERM);
-	// term(&node->value.children.l[new_index]);
-
-	// size_t new_index = ast_insert_node(node, AST_FACTOR);
-	// factor(&node->value.children.l[new_index]);
-
-	// size_t new_index = ast_insert_node(node, AST_EXPR_NO_COMP);
-	// expr_no_comp(&node->value.children.l[new_index]);
-
-	size_t new_index = ast_insert_node(node, AST_EXPR);
-	expression(&node->value.children.l[new_index]);
-
-
-
 	// size_t new_index = ast_insert_node(node, AST_EXPR);
 	// expression(&node->value.children.l[new_index]);
 
-	// printf("success? %u\n", ok);
+	size_t new_index = ast_insert_node(node, AST_STMT_LIST);
+	bool ok = statement_list(&node->value.children.l[new_index]);
+
+	printf("success? %u\n", ok);
 }
 
 bool parse(const struct lex_token_list *tokens, const char **lines, struct ast_node *root) {

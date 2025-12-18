@@ -30,6 +30,8 @@ static const char *ast_node_type_to_str(enum ast_node_type type) {
 			return "FUNC_CALL";
 		case AST_CONDITIONAL:
 			return "CONDITIONAL";
+		case AST_RETURN:
+			return "RETURN";
 	}
 	return "";
 }
