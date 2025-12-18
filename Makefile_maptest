@@ -1,0 +1,17 @@
+CC=clang
+CFLAGS=-I. -Wall -Wextra -g --debug -O3
+	   # -fsanitize=address,undefined -static-libasan \
+
+LDFLAGS=
+
+OBJ = test/maptest.o src/strmap.o
+
+build: $(OBJ) 
+	$(CC) -o maptest $^ $(CFLAGS) $(LDFLAGS)
+
+%.o: %.c
+	$(CC) -c -o $@ $< $(CFLAGS) 
+
+clean:
+	rm -f maptest src/*.o test/*.o
+
