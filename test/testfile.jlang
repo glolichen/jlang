@@ -1,4 +1,7 @@
 {
-	a = 67;
-	return a;
+	a = 5;
+	b = 19 * a;
+	b = b + 1;
+	b = b * 2;
+	return b + (b > a) + b;
 }

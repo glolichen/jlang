@@ -69,6 +69,8 @@ const char *lex_token_type_to_str(enum lex_token_type type) {
 			return "SLASH";
 		case LEX_STAR:
 			return "STAR";
+		case LEX_PERCENT:
+			return "PERCENT";
 		case LEX_BANG:
 			return "BANG";
 		case LEX_BANG_EQUAL:
@@ -171,7 +173,9 @@ static enum lex_token_type str_to_delim(const char *str) {
 	if (strcmp(str, "*") == 0)
 		return LEX_STAR;
 	if (strcmp(str, "!") == 0)
-		return LEX_BANG;
+		return LEX_STAR;
+	if (strcmp(str, "%") == 0)
+		return LEX_PERCENT;
 	if (strcmp(str, "!=") == 0)
 		return LEX_BANG_EQUAL;
 	if (strcmp(str, "=") == 0)

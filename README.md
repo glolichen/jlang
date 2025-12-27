@@ -32,6 +32,7 @@ Compiler for very minimal C-like language. Compiles to LLVM IR.
 
 <factor> ::= identifier
           |  number
+          |  <func_call>
           |  "(" <expression> ")"
 ```
 

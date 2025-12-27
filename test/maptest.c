@@ -9,7 +9,7 @@
 
 #define OPS 100000
 #define TEST_EVERY 500
-#define PRINT_EVERY 1000
+#define PRINT_EVERY 5000
 
 #define	MIN_VAL -5000
 #define MAX_VAL 5000

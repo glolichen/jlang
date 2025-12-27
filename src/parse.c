@@ -14,6 +14,7 @@ static const enum lex_token_type COMP_OPS[] = {
 	LEX_LESS, LEX_LESS_EQUAL,
 	LEX_GREATER, LEX_GREATER_EQUAL
 };
+static const size_t COMP_OPS_SIZE = sizeof(COMP_OPS) / sizeof(COMP_OPS[0]);
 
 static const char **line_list;
 static struct lex_token_list token_list;
@@ -96,7 +97,18 @@ static bool expect(enum lex_token_type type) {
 static void expr_no_comp(struct ast_node *node);
 static void expression(struct ast_node *node);
 
+static bool func_call(struct ast_node *node);
+
 static void factor(struct ast_node *node) {
+	size_t start_index = current_index;
+
+	size_t new_index = ast_insert_node(node, AST_FUNC_CALL);
+	if (func_call(&node->value.children.l[new_index])) 
+		return;
+
+	set_token(start_index);
+	ast_remove_node(node, new_index);
+
 	if (is_type(LEX_NUMBER) || is_type(LEX_IDENTIFIER)) {
 		ast_insert_leaf(node, get_cur());
 		next();
@@ -125,7 +137,7 @@ static void term(struct ast_node *node) {
 	size_t new_index = ast_insert_node(node, AST_FACTOR);
 	factor(&node->value.children.l[new_index]);
 
-	while (is_type(LEX_STAR) || is_type(LEX_SLASH)) {
+	while (is_type(LEX_STAR) || is_type(LEX_SLASH) || is_type(LEX_PERCENT)) {
 		ast_insert_leaf(node, get_cur());
 		next();
 		new_index = ast_insert_node(node, AST_FACTOR);
@@ -155,7 +167,7 @@ static void expression(struct ast_node *node) {
 	size_t new_index = ast_insert_node(node, AST_EXPR_NO_COMP);
 	expr_no_comp(&node->value.children.l[new_index]);
 
-	if (!is_types(COMP_OPS, sizeof(COMP_OPS) / sizeof(COMP_OPS[0])))
+	if (!is_types(COMP_OPS, COMP_OPS_SIZE))
 		return;
 	
 	ast_insert_leaf(node, get_cur());
@@ -212,9 +224,6 @@ static bool assignment(struct ast_node *node) {
 	size_t new_index = ast_insert_node(node, AST_EXPR);
 	expression(&node->value.children.l[new_index]);
 
-	expect(LEX_SEMICOLON);
-	next();
-
 	return true;
 }
 
@@ -227,14 +236,12 @@ static bool func_call(struct ast_node *node) {
 
 	size_t new_index = ast_insert_node(node, AST_EXPR_LIST);
 	if (!expression_list(&node->value.children.l[new_index])) {
-		fprintf(stderr, "[ERROR] expected expression list in function call\n");
-		fprintf(stderr, "line %zu: ", get_cur()->line);
-		print_cur_no_prefix(stderr);
-		longjmp(error_buf, 1);
+		return false;
+		// fprintf(stderr, "[ERROR] expected expression list in function call\n");
+		// fprintf(stderr, "line %zu: ", get_cur()->line);
+		// print_cur_no_prefix(stderr);
+		// longjmp(error_buf, 1);
 	}
-
-	expect(LEX_SEMICOLON);
-	next();
 
 	return true;
 }
@@ -247,9 +254,6 @@ static bool parse_return(struct ast_node *node) {
 
 	size_t new_index = ast_insert_node(node, AST_EXPR);
 	expression(&node->value.children.l[new_index]);
-
-	expect(LEX_SEMICOLON);
-	next();
 
 	return true;
 }
@@ -265,14 +269,20 @@ static bool statement(struct ast_node *node) {
 	size_t start_index = current_index;
 
 	size_t new_index = ast_insert_node(node, AST_ASSIGN);
-	if (assignment(&node->value.children.l[new_index]))
+	if (assignment(&node->value.children.l[new_index])) {
+		expect(LEX_SEMICOLON);
+		next();
 		return true;
+	}
 
 	set_token(start_index);
 	ast_remove_node(node, new_index);
 	new_index = ast_insert_node(node, AST_FUNC_CALL);
-	if (func_call(&node->value.children.l[new_index]))
+	if (func_call(&node->value.children.l[new_index])) {
+		expect(LEX_SEMICOLON);
+		next();
 		return true;
+	}
 
 	set_token(start_index);
 	ast_remove_node(node, new_index);
@@ -283,8 +293,11 @@ static bool statement(struct ast_node *node) {
 	set_token(start_index);
 	ast_remove_node(node, new_index);
 	new_index = ast_insert_node(node, AST_RETURN);
-	if (parse_return(&node->value.children.l[new_index]))
+	if (parse_return(&node->value.children.l[new_index])) {
+		expect(LEX_SEMICOLON);
+		next();
 		return true;
+	}
 
 	return false;
 }

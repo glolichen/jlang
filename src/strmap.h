@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-typedef void * strmap;
+typedef struct strmap_list_node ** strmap;
 
 strmap strmap_new();
 void strmap_set(strmap *map_ptr, const char *str, void *value, size_t value_size);

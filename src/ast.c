@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <string.h>
 #include <stdio.h>
 
 #include "ast.h"
@@ -46,8 +47,10 @@ struct ast_node ast_new_node(enum ast_node_type type) {
 // will free all lex_token's under the node/tree
 // those tokens will be set to NULL so that they are not freed again
 void ast_free_node(struct ast_node *node) {
-	if (node->type == AST_LEAF)
-		lex_free_token(&node->value.token);
+	if (node->type == AST_LEAF) 
+	{
+		// lex_free_token(&node->value.token);
+	}
 	else
 		ast_free_node_list(&node->value.children);
 }

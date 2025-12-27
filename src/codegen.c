@@ -5,6 +5,7 @@
 #include <llvm-c/BitWriter.h>
 
 #include <inttypes.h>
+#include <llvm-c/Types.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,7 +33,6 @@ static LLVMValueRef codegen_factor(const struct ast_node *node, const strmap *va
 		return codegen_number(&child->value.token);
 
 	if (child->value.token.type == LEX_IDENTIFIER) {
-		// TODO: variables
 		LLVMValueRef *value = strmap_get(var_map, child->value.token.str);
 		if (value != NULL)
 			return *value;
@@ -60,10 +60,20 @@ static LLVMValueRef codegen_term(const struct ast_node *node, const strmap *var_
 
 		LLVMValueRef rhs = codegen_factor(&list->l[i + 1], var_map);
 
-		if (list->l[i].value.token.type == LEX_STAR)
-			lhs = LLVMBuildMul(builder, lhs, rhs, "multmp");
-		else if (list->l[i].value.token.type == LEX_SLASH)
-			lhs = LLVMBuildSDiv(builder, lhs, rhs, "multmp");
+		switch (list->l[i].value.token.type) {
+			case LEX_STAR:
+				lhs = LLVMBuildMul(builder, lhs, rhs, "multmp");
+				break;
+			case LEX_SLASH:
+				lhs = LLVMBuildSDiv(builder, lhs, rhs, "divtmp");
+				break;
+			case LEX_PERCENT:
+				lhs = LLVMBuildSRem(builder, lhs, rhs, "modtmp");
+				break;
+			default:
+				fprintf(stderr, "ERROR! (2)");
+				exit(1);
+		}
 	}
 
 	if (i != list->size) {
@@ -235,17 +245,26 @@ static void codegen_stmt_list(const struct ast_node *node, strmap *var_map) {
 bool codegen(const char *name, const struct ast_node *root) {
     LLVMModuleRef mod = LLVMModuleCreateWithName(name);
 
+	//    LLVMTypeRef getchar_param_types[] = { };
+	//    LLVMTypeRef getchar_ret_type = LLVMFunctionType(LLVMInt8Type(), getchar_param_types, 0, 0);
+	//    LLVMValueRef getchar_func = LLVMAddFunction(mod, "getchar", getchar_ret_type);
+	// (void) getchar_func;
+
     LLVMTypeRef param_types[] = { };
     LLVMTypeRef ret_type = LLVMFunctionType(LLVMInt32Type(), param_types, 0, 0);
-    LLVMValueRef sum = LLVMAddFunction(mod, "main", ret_type);
+    LLVMValueRef main_func = LLVMAddFunction(mod, "main", ret_type);
 
-    LLVMBasicBlockRef entry = LLVMAppendBasicBlock(sum, "entry");
+    LLVMBasicBlockRef entry = LLVMAppendBasicBlock(main_func, "entry");
 
     builder = LLVMCreateBuilder();
     LLVMPositionBuilderAtEnd(builder, entry);
 
-	strmap var_map = strmap_new();
+	// LLVMValueRef params[] = { LLVMConstInt(LLVMInt32Type(), 0, 0) };
+	// LLVMValueRef value = LLVMBuildCall2(builder, LLVMInt8Type(), getchar_func, params, 0, "getchartmp");
 
+	// LLVMBuildRet(builder, value);
+
+	strmap var_map = strmap_new();
 	codegen_stmt_list(&root->value.children.l[0], &var_map);
 
     char *error = NULL;

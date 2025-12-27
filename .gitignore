@@ -2,4 +2,5 @@
 *.bc
 jlang
 maptest
+a.out
 breakpoints

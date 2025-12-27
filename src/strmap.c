@@ -35,9 +35,9 @@ strmap strmap_new() {
 	return map;
 }
 
-void strmap_set_internal(strmap *map_ptr, const char *str, void *value, size_t value_size, bool copy_value);
+static void strmap_set_internal(strmap *map_ptr, const char *str, void *value, size_t value_size, bool copy_value);
 
-void strmap_rehash(strmap *map_ptr) {
+static void strmap_rehash(strmap *map_ptr) {
 	struct strmap_list_node **old_map = *map_ptr;
 
 	uint64_t old_bucket_count = bucket_count;
@@ -71,7 +71,7 @@ void strmap_rehash(strmap *map_ptr) {
 	*map_ptr = new_map;
 }
 
-void strmap_set_internal(strmap *map_ptr, const char *str, void *value, size_t value_size, bool copy_value) {
+static void strmap_set_internal(strmap *map_ptr, const char *str, void *value, size_t value_size, bool copy_value) {
 	struct strmap_list_node **map = *map_ptr;
 
 	uint64_t hash = djb2_hash((const unsigned char *) str);

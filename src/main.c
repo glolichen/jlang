@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include "lex.h"
 #include "ast.h"
@@ -14,7 +15,13 @@ size_t count_lines(FILE *file) {
 		if (c == '\n')
 			lines++;
 	}
+
+	// rewind sets errno on error
+	errno = 0;
 	rewind(file);
+	if (errno != 0)
+		return -1;
+
 	return lines;
 }
 
@@ -30,6 +37,9 @@ char *get_module_name(const char *filename) {
 	}
 
 	char *module_name = malloc((mod_name_len + 1) * sizeof(char));
+	if (module_name == NULL)
+		return NULL;
+
 	strncpy(module_name, filename, mod_name_len);
 	module_name[mod_name_len] = 0;
 
@@ -50,11 +60,31 @@ int main(int argc, const char *argv[]) {
 
 	size_t num_lines = count_lines(infile);
 
+	// check that these are not zero so that lines and line_lens later are not 0 length allocations
+	// this is done to please the clang static analyzer
+	if (num_lines == 0 || num_lines + 1 == 0) {
+		fclose(infile);
+		fprintf(stderr, "Error: empty file\n");
+		return 1;
+	}
+
 	char **lines = malloc((num_lines + 1) * sizeof(char *));
+	if (lines == NULL) {
+		fclose(infile);
+		fprintf(stderr, "Error: malloc failure\n");
+		return 1;
+	}
+
 	for (size_t i = 0; i <= num_lines; i++)
 		lines[i] = NULL;
 
 	size_t *line_lens = malloc(num_lines * sizeof(size_t));
+	if (line_lens == NULL) {
+		fclose(infile);
+		free(lines);
+		fprintf(stderr, "Error: malloc failure\n");
+		return 1;
+	}
 
 	size_t line_counter = 0;
 	size_t buffer_size = 0, line_length = 0;
@@ -74,14 +104,6 @@ int main(int argc, const char *argv[]) {
 	// for (size_t i = 0; i < token_list.size; i++)
 	// 	lex_print_token(&token_list.l[i]);
 
-	// switch (scan_error.type) {
-	// 	case lex::SCAN_LINE_INT_OUT_OF_BOUNDS:
-	// 		std::cerr << "Error: line " << scan_error.line << ": integer out of bounds";
-	// 		return 1;
-	// 	case lex::SCAN_LINE_OK:
-	// 		;
-	// }
-
 	struct ast_node root = ast_new_node(AST_ROOT);
 	bool ok = parse(&token_list, (const char **) lines, &root);
 
@@ -89,8 +111,14 @@ int main(int argc, const char *argv[]) {
 		ast_print(&root);
 
 		char *module_name = get_module_name(argv[1]);
-		codegen(module_name, &root);
-		free(module_name);
+		if (module_name == NULL) {
+			fprintf(stderr, "Error: malloc failure\n");
+			ok = false;
+		}
+		else {
+			codegen(module_name, &root);
+			free(module_name);
+		}
 	}
 
 	ast_free_node(&root);
@@ -101,6 +129,6 @@ int main(int argc, const char *argv[]) {
 	free(lines);
 	free(line_lens);
 
-	return 0;
+	return ok ? 0 : 1;
 };
 
