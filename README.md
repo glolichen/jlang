@@ -56,3 +56,4 @@ Didn't bother with inheritance (AST node is just a list of children).
  - https://pauladamsmith.com/blog/2015/01/how-to-get-started-with-llvm-c-api.html   
  - https://llvm.org/docs/tutorial/
  - https://github.com/benbjohnson/llvm-c-kaleidoscope (very useful)
+ - https://www.javaadvent.com/2025/12/java-hello-world-llvm-edition.html

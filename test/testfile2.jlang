@@ -1,0 +1,5 @@
+{
+	a = getchar();
+	b = getchar();
+	return a - b;
+}

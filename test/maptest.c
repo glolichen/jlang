@@ -34,7 +34,7 @@ int main() {
 	char **strs = malloc(NUM_STR * sizeof(const char *));
 	int *values = malloc(NUM_STR * sizeof(int));
 
-	strmap map = strmap_new();
+	struct strmap map = strmap_new();
 
 	for (int i = 0 ; i < NUM_STR; i++) {
 		char *str;
