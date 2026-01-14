@@ -18,75 +18,105 @@
 LLVMModuleRef module;
 LLVMBuilderRef builder;
 
-static struct {
-	const char *func_name;
+struct function_info {
 	LLVMValueRef func;
-	bool is_defined;
-} builtin_funcs[] = {
-	{ "getchar", NULL, 0 },
+	LLVMTypeRef type;
+	bool is_builtin;
+
+	// if builtin, whether is declared in bitcode
+	// if not builtin, whether is defined
+	bool is_defined_or_declared;
 };
 
-// -1 = not builtin func, 0 = not defined, 1 = defined
-static bool get_builtin_func(const char *func_name, bool *defined, LLVMValueRef *func, LLVMTypeRef *type) {
-	size_t num_funcs = sizeof(builtin_funcs) / sizeof(builtin_funcs[0]);
-	for (size_t i = 0; i < num_funcs; i++) {
-		if (strcmp(builtin_funcs[i].func_name, func_name) == 0) {
-			*defined = builtin_funcs[i].is_defined;
-			*func = builtin_funcs[i].func;
-			*type = LLVMFunctionType(LLVMInt8Type(), NULL, 0, 0);
-			return true;
-		}
-	}
-	return false;
-}
-static bool set_builtin_func(const char *func_name, bool value, LLVMValueRef func) {
-	size_t num_funcs = sizeof(builtin_funcs) / sizeof(builtin_funcs[0]);
-	for (size_t i = 0; i < num_funcs; i++) {
-		if (strcmp(builtin_funcs[i].func_name, func_name) == 0) {
-			builtin_funcs[i].func = func;
-			builtin_funcs[i].is_defined = value;
-			return true;
-		}
-	}
-	return false;
+// static struct {
+// 	const char *func_name;
+// 	LLVMValueRef func;
+// 	bool is_defined;
+// } builtin_funcs[] = {
+// 	{ "getchar", NULL, 0 },
+// };
+//
+// // -1 = not builtin func, 0 = not defined, 1 = defined
+// static bool get_builtin_func(const char *func_name, bool *defined, LLVMValueRef *func, LLVMTypeRef *type) {
+// 	size_t num_funcs = sizeof(builtin_funcs) / sizeof(builtin_funcs[0]);
+// 	for (size_t i = 0; i < num_funcs; i++) {
+// 		if (strcmp(builtin_funcs[i].func_name, func_name) == 0) {
+// 			*defined = builtin_funcs[i].is_defined;
+// 			*func = builtin_funcs[i].func;
+// 			*type = LLVMFunctionType(LLVMInt8Type(), NULL, 0, 0);
+// 			return true;
+// 		}
+// 	}
+// 	return false;
+// }
+// static bool set_builtin_func(const char *func_name, bool value, LLVMValueRef func) {
+// 	size_t num_funcs = sizeof(builtin_funcs) / sizeof(builtin_funcs[0]);
+// 	for (size_t i = 0; i < num_funcs; i++) {
+// 		if (strcmp(builtin_funcs[i].func_name, func_name) == 0) {
+// 			builtin_funcs[i].func = func;
+// 			builtin_funcs[i].is_defined = value;
+// 			return true;
+// 		}
+// 	}
+// 	return false;
+// }
+
+static void populate_builtin_funcs(struct strmap *func_map) {
+	struct function_info getchar_info = {
+		.func = NULL,
+		.type = LLVMFunctionType(LLVMInt8Type(), NULL, 0, 0),
+		.is_builtin = true,
+		.is_defined_or_declared = false
+	};
+	strmap_set(func_map, "getchar", &getchar_info, sizeof(getchar_info));
 }
 
 static LLVMValueRef codegen_number(const struct lex_token *token) {
 	return LLVMConstInt(LLVMInt32Type(), token->literal.number, 0);
 }
 
-static LLVMValueRef codegen_expression(const struct ast_node *node, const struct strmap *var_map);
+static LLVMValueRef codegen_expression(
+	LLVMModuleRef mod, LLVMBuilderRef build,
+	const struct ast_node *node,
+	const struct strmap *var_map,
+	struct strmap *func_map
+);
 
-static LLVMValueRef codegen_func_call(const struct ast_node *node, const struct strmap *var_map) {
+static LLVMValueRef codegen_func_call(
+	LLVMModuleRef mod, LLVMBuilderRef build,
+	const struct ast_node *node,
+	const struct strmap *var_map,
+	struct strmap *func_map
+) {
+	(void) var_map;
+
 	const char *func_name = node->value.children.l[0].value.token.str;
+	struct function_info *func_info = strmap_get(func_map, func_name);
 
-	bool is_defined;
-	LLVMTypeRef func_type;
-	LLVMValueRef func;
-	bool is_builtin = get_builtin_func(func_name, &is_defined, &func, &func_type);
-
-	if (!is_builtin) {
-		fprintf(stderr, "NON BUILTIN FUNCTION!\n");
+	if (func_info == NULL) {
+		fprintf(stderr, "function not defined!\n");
 		return NULL;
 	}
 
-	if (!is_defined) {
-		func = LLVMAddFunction(module, func_name, func_type);
-		set_builtin_func(func_name, true, func);
+	if (!func_info->is_builtin) {
+		fprintf(stderr, "TODO: non builtin function\n");
+		return NULL;
+	}
+
+	LLVMValueRef func_ref;
+	if ((func_ref = func_info->func) == NULL) {
+		func_info->func = func_ref = LLVMAddFunction(mod, func_name, func_info->type);
+		strmap_set(func_map, func_name, func_info, sizeof(*func_info));
 	}
 		
 	if (strcmp(func_name, "getchar") != 0)
 		return NULL;
 
 	return LLVMBuildIntCast2(
-		builder,
+		build,
 		LLVMBuildCall2(
-			builder,
-			LLVMFunctionType(LLVMInt8Type(), NULL, 0, 0),
-			func,
-			NULL,
-			0,
-			"getchartmp"
+			build, LLVMFunctionType(LLVMInt8Type(), NULL, 0, 0),
+			func_ref, NULL, 0, "getchartmp"
 		),
 		LLVMInt32Type(),
 		true,
@@ -94,11 +124,16 @@ static LLVMValueRef codegen_func_call(const struct ast_node *node, const struct 
 	);
 }
 
-static LLVMValueRef codegen_factor(const struct ast_node *node, const struct strmap *var_map) {
+static LLVMValueRef codegen_factor(
+	LLVMModuleRef module, LLVMBuilderRef builder,
+	const struct ast_node *node,
+	const struct strmap *var_map,
+	struct strmap *func_map
+) {
 	const struct ast_node *child = &node->value.children.l[0];
 
 	if (child->type == AST_EXPR)
-		return codegen_expression(child, var_map);
+		return codegen_expression(module, builder, child, var_map, func_map);
 
 	if (child->type == AST_LEAF) {
 		if (child->value.token.type == LEX_NUMBER)
@@ -111,7 +146,7 @@ static LLVMValueRef codegen_factor(const struct ast_node *node, const struct str
 		}
 	}
 	else if (child->type == AST_FUNC_CALL) {
-		LLVMValueRef value = codegen_func_call(child, var_map);
+		LLVMValueRef value = codegen_func_call(module, builder, child, var_map, func_map);
 		if (value != NULL)
 			return value;
 	}
@@ -120,14 +155,19 @@ static LLVMValueRef codegen_factor(const struct ast_node *node, const struct str
 	exit(1);
 }
 
-static LLVMValueRef codegen_term(const struct ast_node *node, const struct strmap *var_map) {
+static LLVMValueRef codegen_term(
+	LLVMModuleRef mod, LLVMBuilderRef build,
+	const struct ast_node *node,
+	const struct strmap *var_map,
+	struct strmap *func_map
+) {
 	if (node->type != AST_TERM) {
 		fprintf(stderr, "ERROR!\n");
 		exit(1);
 	}
 
 	const struct ast_node_list *list = &node->value.children;
-	LLVMValueRef lhs = codegen_factor(&list->l[0], var_map);
+	LLVMValueRef lhs = codegen_factor(mod, build, &list->l[0], var_map, func_map);
 
 	size_t i;
 	for (i = 1; i < list->size - 1; i += 2) {
@@ -136,17 +176,17 @@ static LLVMValueRef codegen_term(const struct ast_node *node, const struct strma
 			exit(1);
 		}
 
-		LLVMValueRef rhs = codegen_factor(&list->l[i + 1], var_map);
+		LLVMValueRef rhs = codegen_factor(mod, build, &list->l[i + 1], var_map, func_map);
 
 		switch (list->l[i].value.token.type) {
 			case LEX_STAR:
-				lhs = LLVMBuildMul(builder, lhs, rhs, "multmp");
+				lhs = LLVMBuildMul(build, lhs, rhs, "multmp");
 				break;
 			case LEX_SLASH:
-				lhs = LLVMBuildSDiv(builder, lhs, rhs, "divtmp");
+				lhs = LLVMBuildSDiv(build, lhs, rhs, "divtmp");
 				break;
 			case LEX_PERCENT:
-				lhs = LLVMBuildSRem(builder, lhs, rhs, "modtmp");
+				lhs = LLVMBuildSRem(build, lhs, rhs, "modtmp");
 				break;
 			default:
 				fprintf(stderr, "ERROR! (2)");
@@ -162,7 +202,12 @@ static LLVMValueRef codegen_term(const struct ast_node *node, const struct strma
 	return lhs;
 }
 
-static LLVMValueRef codegen_expr_no_comp(const struct ast_node *node, const struct strmap *var_map) {
+static LLVMValueRef codegen_expr_no_comp(
+	LLVMModuleRef mod, LLVMBuilderRef build,
+	const struct ast_node *node,
+	const struct strmap *var_map,
+	struct strmap *func_map
+) {
 	if (node->type != AST_EXPR_NO_COMP) {
 		fprintf(stderr, "ERROR!\n");
 		exit(1);
@@ -179,9 +224,9 @@ static LLVMValueRef codegen_expr_no_comp(const struct ast_node *node, const stru
 		i++;
 	}
 
-	LLVMValueRef lhs = codegen_term(&list->l[i], var_map);
+	LLVMValueRef lhs = codegen_term(mod, build, &list->l[i], var_map, func_map);
 	if (first_is_negative)
-		lhs = LLVMBuildMul(builder, lhs, LLVMConstInt(LLVMInt32Type(), -1, 0), "negtmp");
+		lhs = LLVMBuildMul(build, lhs, LLVMConstInt(LLVMInt32Type(), -1, 0), "negtmp");
 
 	for (i = i + 1; i < list->size - 1; i += 2) {
 		if (list->l[i].type != AST_LEAF) {
@@ -189,12 +234,12 @@ static LLVMValueRef codegen_expr_no_comp(const struct ast_node *node, const stru
 			exit(1);
 		}
 
-		LLVMValueRef rhs = codegen_term(&list->l[i + 1], var_map);
+		LLVMValueRef rhs = codegen_term(mod, build, &list->l[i + 1], var_map, func_map);
 
 		if (list->l[i].value.token.type == LEX_PLUS)
-			lhs = LLVMBuildAdd(builder, lhs, rhs, "addtmp");
+			lhs = LLVMBuildAdd(build, lhs, rhs, "addtmp");
 		else if (list->l[i].value.token.type == LEX_MINUS)
-			lhs = LLVMBuildSub(builder, lhs, rhs, "subtmp");
+			lhs = LLVMBuildSub(build, lhs, rhs, "subtmp");
 	}
 
 	if (i != list->size) {
@@ -205,7 +250,12 @@ static LLVMValueRef codegen_expr_no_comp(const struct ast_node *node, const stru
 	return lhs;
 }
 
-static LLVMValueRef codegen_expression(const struct ast_node *node, const struct strmap *var_map) {
+static LLVMValueRef codegen_expression(
+	LLVMModuleRef mod, LLVMBuilderRef build,
+	const struct ast_node *node,
+	const struct strmap *var_map,
+	struct strmap *func_map
+) {
 	if (node->type != AST_EXPR) {
 		fprintf(stderr, "ERROR!\n");
 		exit(1);
@@ -215,12 +265,12 @@ static LLVMValueRef codegen_expression(const struct ast_node *node, const struct
 
 	// not comparison, only child is expr_no_comp
 	if (list->size == 1)
-		return codegen_expr_no_comp(&list->l[0], var_map);
+		return codegen_expr_no_comp(mod, build, &list->l[0], var_map, func_map);
 
 	if (list->size == 3) {
-		LLVMValueRef lhs = codegen_expr_no_comp(&list->l[0], var_map);
+		LLVMValueRef lhs = codegen_expr_no_comp(mod, build, &list->l[0], var_map, func_map);
 		enum lex_token_type comp_type = list->l[1].value.token.type;
-		LLVMValueRef rhs = codegen_expr_no_comp(&list->l[2], var_map);
+		LLVMValueRef rhs = codegen_expr_no_comp(mod, build, &list->l[2], var_map, func_map);
 
 		LLVMIntPredicate comp_pred;
 		switch (comp_type) {
@@ -247,15 +297,20 @@ static LLVMValueRef codegen_expression(const struct ast_node *node, const struct
 				exit(1);
 		}
 
-		LLVMValueRef bool_value = LLVMBuildICmp(builder, comp_pred, lhs, rhs, "cmptmp");
-		return LLVMBuildIntCast2(builder, bool_value, LLVMInt32Type(), false, "cmptmp2");
+		LLVMValueRef bool_value = LLVMBuildICmp(build, comp_pred, lhs, rhs, "cmptmp");
+		return LLVMBuildIntCast2(build, bool_value, LLVMInt32Type(), false, "cmptmp2");
 	}
 
 	fprintf(stderr, "ERROR! (6)");
 	exit(1);
 }
 
-static void codegen_assignment(const struct ast_node *node, struct strmap *var_map) {
+static void codegen_assignment(
+	LLVMModuleRef mod, LLVMBuilderRef build,
+	const struct ast_node *node,
+	struct strmap *var_map,
+	struct strmap *func_map
+) {
 	if (node->type != AST_ASSIGN) {
 		fprintf(stderr, "ERROR!\n");
 		exit(1);
@@ -269,11 +324,16 @@ static void codegen_assignment(const struct ast_node *node, struct strmap *var_m
 	}
 
 	const struct lex_token *ident = &list->l[0].value.token;
-	LLVMValueRef rhs = codegen_expression(&list->l[1], var_map);
+	LLVMValueRef rhs = codegen_expression(mod, build, &list->l[1], var_map, func_map);
 	strmap_set(var_map, ident->str, &rhs, sizeof(rhs));
 }
 
-static void codegen_return(const struct ast_node *node, struct strmap *var_map) {
+static void codegen_return(
+	LLVMModuleRef mod, LLVMBuilderRef build,
+	const struct ast_node *node,
+	struct strmap *var_map,
+	struct strmap *func_map
+) {
 	if (node->type != AST_RETURN) {
 		fprintf(stderr, "ERROR!\n");
 		exit(1);
@@ -286,11 +346,16 @@ static void codegen_return(const struct ast_node *node, struct strmap *var_map) 
 		exit(1);
 	}
 
-	LLVMValueRef value = codegen_expression(&list->l[0], var_map);
-	LLVMBuildRet(builder, value);
+	LLVMValueRef value = codegen_expression(mod, build, &list->l[0], var_map, func_map);
+	LLVMBuildRet(build, value);
 }
 
-static void codegen_statement(const struct ast_node *node, struct strmap *var_map) {
+static void codegen_statement(
+	LLVMModuleRef mod, LLVMBuilderRef build,
+	const struct ast_node *node,
+	struct strmap *var_map,
+	struct strmap *func_map
+) {
 	if (node->type != AST_STMT) {
 		fprintf(stderr, "ERROR!\n");
 		exit(1);
@@ -299,10 +364,10 @@ static void codegen_statement(const struct ast_node *node, struct strmap *var_ma
 	const struct ast_node *child = &node->value.children.l[0];
 	switch (child->type) {
 		case AST_ASSIGN:
-			codegen_assignment(child, var_map);
+			codegen_assignment(mod, build, child, var_map, func_map);
 			break;	
 		case AST_RETURN:
-			codegen_return(child, var_map);
+			codegen_return(mod, build, child, var_map, func_map);
 			break;
 		default:
 			fprintf(stderr, "ERROR!\n");
@@ -310,7 +375,12 @@ static void codegen_statement(const struct ast_node *node, struct strmap *var_ma
 	}
 }
 
-static void codegen_stmt_list(const struct ast_node *node, struct strmap *var_map) {
+static void codegen_stmt_list(
+	LLVMModuleRef mod, LLVMBuilderRef build,
+	const struct ast_node *node,
+	struct strmap *var_map,
+	struct strmap *func_map
+) {
 	if (node->type != AST_STMT_LIST) {
 		fprintf(stderr, "ERROR!\n");
 		exit(1);
@@ -318,11 +388,11 @@ static void codegen_stmt_list(const struct ast_node *node, struct strmap *var_ma
 
 	const struct ast_node_list *list = &node->value.children;
 	for (size_t i = 0; i < list->size; i++)
-		codegen_statement(&list->l[i], var_map);
+		codegen_statement(mod, build, &list->l[i], var_map, func_map);
 }
 
 bool codegen(const char *name, const struct ast_node *root) {
-    module = LLVMModuleCreateWithName(name);
+    LLVMModuleRef module = LLVMModuleCreateWithName(name);
 
 	// start
 	// LLVMTypeRef getchar_param_types[] = { };
@@ -336,7 +406,7 @@ bool codegen(const char *name, const struct ast_node *root) {
 
     LLVMBasicBlockRef entry = LLVMAppendBasicBlock(main_func, "entry");
 
-    builder = LLVMCreateBuilder();
+    LLVMBuilderRef builder = LLVMCreateBuilder();
     LLVMPositionBuilderAtEnd(builder, entry);
 
 	// start
@@ -359,8 +429,9 @@ bool codegen(const char *name, const struct ast_node *root) {
 	// LLVMBuildRet(builder, getchar_val);
 	// end
 
-	struct strmap var_map = strmap_new();
-	codegen_stmt_list(&root->value.children.l[0], &var_map);
+	struct strmap var_map = strmap_new(), func_map = strmap_new();
+	populate_builtin_funcs(&func_map);
+	codegen_stmt_list(module, builder, &root->value.children.l[0], &var_map, &func_map);
 
 	char *error = NULL;
 	LLVMVerifyModule(module, LLVMAbortProcessAction, &error);
@@ -378,6 +449,7 @@ bool codegen(const char *name, const struct ast_node *root) {
 
 	free(bitcode_filename);
 	strmap_free(&var_map);
+	strmap_free(&func_map);
 
     LLVMDisposeBuilder(builder);
 
