@@ -120,6 +120,8 @@ static void strmap_set_internal(struct strmap *map_ptr, const char *str, void *v
 	cur->next = new_node;
 }
 
+// this will LITERALLY return the POINTER TO WHAT IS STORED IN THE MAP
+// if it is modified, the value in the map will also be modified
 void *strmap_get(const struct strmap *map_ptr, const char *str) {
 	struct strmap_list_node **map = map_ptr->list;
 

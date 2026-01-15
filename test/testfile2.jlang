@@ -1,6 +1,7 @@
 {
 	a = getchar();
 	b = getchar();
+	putchar(a);
 	return a - b;
 }
 
