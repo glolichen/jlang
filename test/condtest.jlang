@@ -1,0 +1,10 @@
+{
+	a = getchar();
+	if (a == 98) {
+		putchar(89);
+	}
+	else {
+		putchar(78);
+	}
+	return a;
+}

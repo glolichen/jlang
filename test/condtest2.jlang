@@ -1,0 +1,12 @@
+{
+	userinput = getchar();
+	a = 0;
+	if (userinput == 98) {
+		a = 1;
+	}
+	else {
+		a = 2;
+	}
+	return a;
+}
+

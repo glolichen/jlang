@@ -21,13 +21,6 @@ static uint64_t djb2_hash(const unsigned char *str) {
 	return hash;
 }
 
-struct strmap_list_node {
-	struct strmap_list_node *next;
-	const char *str;
-	void *value;
-	size_t value_size;
-};
-
 struct strmap strmap_new() {
 	struct strmap map = {
 		.list = calloc(STRMAP_STARTING_BUCKETS, sizeof(struct strmap_list_node *)),
@@ -35,6 +28,33 @@ struct strmap strmap_new() {
 		.occupied_buckets = 0
 	};
 	return map;
+}
+
+struct strmap strmap_copy(const struct strmap *old_map_ptr) {
+	struct strmap new_map = {
+		.list = calloc(old_map_ptr->bucket_count, sizeof(struct strmap_list_node *)),
+		.bucket_count = old_map_ptr->bucket_count,
+		.occupied_buckets = old_map_ptr->occupied_buckets
+	};
+
+	for (uint64_t i = 0; i < old_map_ptr->bucket_count; i++) {
+		const struct strmap_list_node *cur_old = old_map_ptr->list[i];
+		struct strmap_list_node **cur = &new_map.list[i];
+		while (cur_old != NULL) {
+			struct strmap_list_node *new_node = malloc(sizeof(struct strmap_list_node));
+
+			new_node->next = NULL;
+			new_node->str = cur_old->str;
+			new_node->value = malloc(cur_old->value_size);
+			memcpy(new_node->value, cur_old->value, cur_old->value_size);
+
+			*cur = new_node;
+			cur = &(*cur)->next;
+			cur_old = cur_old->next;
+		}
+	}
+
+	return new_map;
 }
 
 static void strmap_set_internal(struct strmap *map_ptr, const char *str, void *value, size_t value_size, bool copy_value);
@@ -138,12 +158,14 @@ void *strmap_get(const struct strmap *map_ptr, const char *str) {
 }
 
 // this WILL COPY the value, need to specify the size of the value
-// does NOT copy the string
+// does NOT copy the key (string)
 // the "value" pointer can be freed/exit scope
 void strmap_set(struct strmap *map_ptr, const char *str, void *value, size_t value_size) {
 	strmap_set_internal(map_ptr, str, value, value_size, true);
 }
 
+// will free all VALUES (these have been copied from original, by strmap_set)
+// will not free KEYS (strings)
 void strmap_free(const struct strmap *map_ptr) {
 	struct strmap_list_node **map = map_ptr->list;
 	for (uint64_t i = 0; i < map_ptr->bucket_count; i++) {

@@ -1,6 +1,6 @@
 CC=clang
-CFLAGS=-I. -Wall -Wextra -g --debug -O0
-	   # -fsanitize=address,undefined -static-libasan \
+CFLAGS=-I. -Wall -Wextra -g --debug -O0 \
+	   -fsanitize=address,undefined -static-libasan \
 
 LDFLAGS=
 

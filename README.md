@@ -50,6 +50,10 @@ Didn't bother with inheritance (AST node is just a list of children).
  - `EXPR_LIST`: list of `EXPRESSION`. LENGTH 0 IF PARAMS ARE VOID.
  - `CONDITIONAL`: `EXPRESSION`, `STMT_LIST`, (IF NO ELSE, NO MORE, IF THERE IS ELSE: `EXPRESSION`).
 
+## Implementation Notes
+
+If a variable is assigned for the first time in a block (such as a conditional), it will be "forgotten" as soon as it exits scope. Future uses of that variable will result in an error.
+
 ## LLVM
 
  - https://www.owenstephens.co.uk/blog/2018/09/25/getting-started-with-the-newer-llvm-c-api.html

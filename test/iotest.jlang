@@ -1,0 +1,13 @@
+{
+	a = getchar();
+	b = getchar();
+	putchar(a);
+	c = a * b;
+	c = c - 200;
+	c = c - a;
+	c = c + b;
+	d = c < 50;
+	c = c + d * 10;
+	return c;
+}
+

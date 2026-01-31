@@ -319,7 +319,7 @@ static void codegen_assignment(
 
 	const struct lex_token *ident = &list->l[0].value.token;
 	LLVMValueRef rhs = codegen_expression(mod, build, &list->l[1], var_map, func_map);
-	strmap_set(var_map, ident->str, &rhs, sizeof(rhs));
+	strmap_set(var_map, ident->str, &rhs, sizeof(LLVMValueRef));
 }
 
 static void codegen_return(
@@ -344,6 +344,102 @@ static void codegen_return(
 	LLVMBuildRet(build, value);
 }
 
+static void codegen_stmt_list(
+	LLVMModuleRef mod, LLVMBuilderRef build,
+	const struct ast_node *node,
+	struct strmap *var_map,
+	struct strmap *func_map
+);
+
+// will modify var_map using phi nodes
+void codegen_conditional(
+	LLVMModuleRef mod, LLVMBuilderRef build,
+	const struct ast_node *node,
+	struct strmap *var_map,
+	struct strmap *func_map
+) {
+	LLVMValueRef condition = codegen_expression(
+		mod, build,
+		&node->value.children.l[0],
+		var_map, func_map
+	);
+	if (condition == NULL)
+		return;
+
+	condition = LLVMBuildICmp(
+		build, LLVMIntNE, condition,
+		LLVMConstInt(LLVMInt32Type(), 0, 0),
+		"ifcmptmp"
+	);
+
+	LLVMValueRef func = LLVMGetBasicBlockParent(LLVMGetInsertBlock(build));
+
+	LLVMBasicBlockRef then_block = LLVMAppendBasicBlock(func, "then");
+	LLVMBasicBlockRef else_block = LLVMAppendBasicBlock(func, "else");
+	LLVMBasicBlockRef merge_block = LLVMAppendBasicBlock(func, "ifcont");
+
+	LLVMBuildCondBr(build, condition, then_block, else_block);
+
+
+
+	// generate then block and add merge block to terminate it
+	LLVMPositionBuilderAtEnd(build, then_block);
+	struct strmap var_map_then = strmap_copy(var_map);
+	codegen_stmt_list(mod, build, &node->value.children.l[1], &var_map_then, func_map);
+
+	LLVMBuildBr(build, merge_block);
+	then_block = LLVMGetInsertBlock(build);
+
+
+
+	// generate else block and add merge block to terminate it
+	LLVMPositionBuilderAtEnd(build, else_block);
+	struct strmap var_map_else = strmap_copy(var_map);
+	codegen_stmt_list(mod, build, &node->value.children.l[2], &var_map_else, func_map);
+
+	LLVMBuildBr(build, merge_block);
+	else_block = LLVMGetInsertBlock(build);
+
+
+
+	// deal with merge blocks and add phi nodes
+	LLVMPositionBuilderAtEnd(build, merge_block);
+
+	// iterate through ALREADY DEFINED variables and assign with phi nodes
+	// TODO: but only do this if they have been modified by either block
+	for (uint64_t i = 0; i < var_map->bucket_count; i++) {
+		struct strmap_list_node *cur = var_map->list[i];
+		while (cur != NULL) {
+			LLVMValueRef value_cur = *(LLVMValueRef *) cur->value;
+			LLVMValueRef value_then = *(LLVMValueRef *) strmap_get(&var_map_then, cur->str);
+			LLVMValueRef value_else = *(LLVMValueRef *) strmap_get(&var_map_else, cur->str);
+
+			// printf("var %s: old %p, then %p, else %p\n", cur->str, value_cur, value_then, value_else);
+
+			// if conditional does not affect value, no need for phi
+			if (value_cur == value_then && value_cur == value_else) {
+				cur = cur->next;
+				continue;
+			}
+
+			// printf("phi\n");
+
+			LLVMValueRef phi = LLVMBuildPhi(build, LLVMInt32Type(), "phitmp");
+			LLVMAddIncoming(phi, &value_then, &then_block, 1);
+			LLVMAddIncoming(phi, &value_else, &else_block, 1);
+
+			// printf("the phi value is %p\n", phi);
+
+			strmap_set(var_map, cur->str, &phi, sizeof(LLVMValueRef));
+
+			cur = cur->next;
+		}
+	}
+	
+	strmap_free(&var_map_then);
+	strmap_free(&var_map_else);
+}
+
 static void codegen_statement(
 	LLVMModuleRef mod, LLVMBuilderRef build,
 	const struct ast_node *node,
@@ -365,6 +461,9 @@ static void codegen_statement(
 			break;
 		case AST_FUNC_CALL:
 			codegen_func_call(mod, build, child, var_map, func_map);
+			break;
+		case AST_CONDITIONAL:
+			codegen_conditional(mod, build, child, var_map, func_map);
 			break;
 		default:
 			fprintf(stderr, "ERROR! (17)\n");
@@ -388,6 +487,72 @@ static void codegen_stmt_list(
 		codegen_statement(mod, build, &list->l[i], var_map, func_map);
 }
 
+// void codegen_test(
+// 	LLVMModuleRef mod, LLVMBuilderRef build
+// ) {
+// 	LLVMValueRef val_a = LLVMConstInt(LLVMInt32Type(), 0, 0);
+// 	LLVMValueRef val_b = LLVMConstInt(LLVMInt32Type(), 0, 0);
+//
+// 	LLVMTypeRef getchar_type = LLVMFunctionType(LLVMInt8Type(), NULL, 0, 0);
+// 	struct function_info getchar_info = {
+// 		.func = NULL,
+// 		.type = getchar_type,
+// 		.is_builtin = true,
+// 		.is_defined = false
+// 	};
+// 	LLVMValueRef getchar_func = LLVMAddFunction(mod, "getchar", getchar_type);
+// 	LLVMValueRef val_input = LLVMBuildIntCast2(
+// 		build,
+// 		LLVMBuildCall2(
+// 			build,
+// 			getchar_type, getchar_func,
+// 			NULL, 0, "getchartmp"
+// 		),
+// 		LLVMInt32Type(),
+// 		true,
+// 		"getcharcasttmp"
+// 	);
+//
+// 	LLVMValueRef condition = LLVMBuildICmp(
+// 		build, LLVMIntEQ,
+// 		val_input,
+// 		LLVMConstInt(LLVMInt32Type(), 48, 0),
+// 		"ifcmptmp"
+// 	);
+//
+// 	// Retrieve function.
+// 	LLVMValueRef func = LLVMGetBasicBlockParent(LLVMGetInsertBlock(build));
+//
+// 	// Generate true/false expr and merge.
+// 	LLVMBasicBlockRef then_block = LLVMAppendBasicBlock(func, "then");
+// 	LLVMBasicBlockRef else_block = LLVMAppendBasicBlock(func, "else");
+// 	LLVMBasicBlockRef merge_block = LLVMAppendBasicBlock(func, "ifcont");
+//
+// 	LLVMBuildCondBr(build, condition, then_block, else_block);
+//
+// 	// Generate 'then' block.
+// 	LLVMPositionBuilderAtEnd(build, then_block);
+// 	LLVMValueRef then_value = LLVMConstInt(LLVMInt32Type(), 10, 0);
+//
+// 	LLVMBuildBr(build, merge_block);
+// 	then_block = LLVMGetInsertBlock(build);
+//
+// 	LLVMPositionBuilderAtEnd(build, else_block);
+// 	LLVMValueRef else_value = LLVMConstInt(LLVMInt32Type(), 1, 0);
+//
+// 	LLVMBuildBr(build, merge_block);
+// 	else_block = LLVMGetInsertBlock(build);
+//
+// 	LLVMPositionBuilderAtEnd(build, merge_block);
+// 	LLVMValueRef phi = LLVMBuildPhi(build, LLVMInt32Type(), "phi");
+// 	LLVMAddIncoming(phi, &then_value, &then_block, 1);
+// 	LLVMAddIncoming(phi, &else_value, &else_block, 1);
+//
+//
+// 	LLVMValueRef addtmp = LLVMBuildAdd(build, val_a, phi, "addtmp");
+// 	LLVMBuildRet(build, addtmp);
+// }
+
 bool codegen(const char *name, const struct ast_node *root) {
     LLVMModuleRef module = LLVMModuleCreateWithName(name);
 
@@ -406,25 +571,7 @@ bool codegen(const char *name, const struct ast_node *root) {
     LLVMBuilderRef builder = LLVMCreateBuilder();
     LLVMPositionBuilderAtEnd(builder, entry);
 
-	// start
-	// LLVMValueRef params[] = { LLVMConstInt(LLVMInt32Type(), 0, 0) };
-	// LLVMValueRef getchar_val = LLVMBuildIntCast2(
-	// 	builder,
-	// 	LLVMBuildCall2(
-	// 		builder,
-	// 		LLVMFunctionType(LLVMInt8Type(), NULL, 0, 0),
-	// 		getchar_func,
-	// 		params,
-	// 		0,
-	// 		"getchartmp"
-	// 	),
-	// 	LLVMInt32Type(),
-	// 	true,
-	// 	"getcharcasttmp"
-	// );
-	//
-	// LLVMBuildRet(builder, getchar_val);
-	// end
+	// codegen_test(module, builder);
 
 	struct strmap var_map = strmap_new(), func_map = strmap_new();
 	populate_builtin_funcs(&func_map);
