@@ -46,6 +46,7 @@ struct strmap strmap_copy(const struct strmap *old_map_ptr) {
 			new_node->next = NULL;
 			new_node->str = cur_old->str;
 			new_node->value = malloc(cur_old->value_size);
+			new_node->value_size = cur_old->value_size;
 			memcpy(new_node->value, cur_old->value, cur_old->value_size);
 
 			*cur = new_node;

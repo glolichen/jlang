@@ -1,15 +1,13 @@
 {
 	a = getchar();
-	b = 0;
-	c = 3;
+	b = getchar();
+	c = 0;
 	if (a == 98) {
-		putchar(89);
+		if (b == 99) {
+			c = 1;
+			putchar(89);
+		}
 	}
-	else {
-		b = 1;
-		putchar(78);
-	}
-	c = c * 3;
-	return b + c;
+	return c;
 }
 
