@@ -22,9 +22,14 @@ void codegen_for_loop(
 	// adding the initial value both var_map and var_map_loop
 	// this is so that we can use a phi when setting the variable in the body of the loop
 	// this can be removed from the var_map at the end (if variable not declared/defined before)
-	// FIXME: have this removed, if it's not already declared
-	if (node->value.children.l[0].value.children.size != 0)
+	// FIXME: have it removed, if it's not already declared
+
+	// WARN: problem with this if it's not declared already?
+	if (node->value.children.l[0].value.children.size != 0) {
 		codegen_assignment(mod, build, &node->value.children.l[0], var_map, func_map);
+		// printf("YES!\n");
+		// printf("%s\n", node->value.children.l[0].value.children.l[0].value.token.str);
+	}
 	struct strmap var_map_loop = strmap_copy(var_map);
 
 	LLVMValueRef func = LLVMGetBasicBlockParent(LLVMGetInsertBlock(build));
@@ -84,7 +89,8 @@ void codegen_for_loop(
 
 	// execute loop body and increment
 	codegen_stmt_list(mod, build, &node->value.children.l[3], &var_map_loop, func_map); 
-	codegen_assignment(mod, build, &node->value.children.l[2], &var_map_loop, func_map);
+	if (node->value.children.l->value.children.size != 0)
+		codegen_assignment(mod, build, &node->value.children.l[2], &var_map_loop, func_map);
 
 	// check loop condition to decide ...
 	end_condition = codegen_expression(

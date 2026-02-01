@@ -3,8 +3,10 @@
 CC = clang
 
 CFLAGS = -I. -Wall -Wextra -g --debug -I$(IDIR) \
+         `llvm-config --cflags` \
          -fsanitize=address,undefined -static-libasan \
-         `llvm-config --cflags`
+
+		 # --analyze -Xclang -analyzer-output=html -o analyze/
 
 LDFLAGS = `llvm-config --cxxflags --ldflags --libs mcjit core executionengine interpreter analysis native bitwriter --system-libs`
 

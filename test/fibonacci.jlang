@@ -1,0 +1,53 @@
+{
+	n = 0;
+	input = 48;
+	inputdigits = -1;
+
+	for (i = 1000000000; input != 10; i = i / 10) {
+		n = n + i * (input - 48);
+		inputdigits = inputdigits + 1;
+		input = getchar();
+	}
+
+	for (i = 0; i < 10 - inputdigits - 1; i = i + 1) {
+		n = n / 10;
+	}
+
+	loop_start = 0;
+	if (n <= 3) {
+		loop_start = n;
+	}
+
+	prev = 1;
+	prevprev = 1;
+	current = 2;
+	for (i = loop_start; i < n - 3; i = i + 1) {
+		next = prev + current;
+		prevprev = prev;
+		prev = current;
+		current = next;
+	}
+
+	answer = current;
+	if (n <= 2) {
+		answer = 1;
+	}
+	if (n <= 0) {
+		answer = 0;
+	}
+
+	answerdigits = 0;
+	maxpower = 1;
+	for (maxpower = 1; maxpower <= answer; maxpower = maxpower * 10) { }
+
+	for (power = maxpower / 10; power >= 1; power = power / 10) {
+		digit = answer / power;
+		putchar(digit + 48);
+		answer = answer % power;
+	}
+
+	putchar(10);
+
+	return 0;
+}
+
