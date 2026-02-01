@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include "../src/strmap.h"
+#include "strmap.h"
 
 #define MIN_STR_LEN 5
 #define MAX_STR_LEN 50

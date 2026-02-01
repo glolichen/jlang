@@ -1,8 +1,8 @@
-CC=clang
-CFLAGS=-I. -Wall -Wextra -g --debug -O0 \
-	   -fsanitize=address,undefined -static-libasan \
+CC = clang
+CFLAGS = -I. -Iinclude/ -Wall -Wextra -g --debug -O3 \
+         -fsanitize=address,undefined -static-libasan
 
-LDFLAGS=
+LDFLAGS = 
 
 OBJ = test/maptest.o src/strmap.o
 

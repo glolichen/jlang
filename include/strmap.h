@@ -1,4 +1,5 @@
 #ifndef VARMAP_H
+#define VARMAP_H
 
 #include <stdint.h>
 #include <stdlib.h>

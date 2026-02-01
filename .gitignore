@@ -1,4 +1,7 @@
 *.o
+obj/
+.cache/
+compile_commands.json
 *.bc
 jlang
 maptest

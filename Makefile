@@ -1,21 +1,31 @@
-CC=clang
-CFLAGS=-I. -Wall -Wextra -g --debug \
-	   -fsanitize=address,undefined -static-libasan \
-	   `llvm-config --cflags`
+# https://www.cs.colby.edu/maxwell/courses/tutorials/maketutor/
 
-LDFLAGS=`llvm-config --cxxflags --ldflags --libs mcjit core executionengine interpreter analysis native bitwriter --system-libs`
-#
-# CFLAGS=-I. -Wall -Wextra -g -O3 
+CC = clang
 
-OBJ = src/main.o src/lex.o src/ast.o src/parse.o src/codegen.o src/strmap.o
+CFLAGS = -I. -Wall -Wextra -g --debug -I$(IDIR) \
+         -fsanitize=address,undefined -static-libasan \
+         `llvm-config --cflags`
 
-build: $(OBJ) 
+LDFLAGS = `llvm-config --cxxflags --ldflags --libs mcjit core executionengine interpreter analysis native bitwriter --system-libs`
+
+IDIR = include
+ODIR = obj
+
+_OBJ = main.o lex.o ast.o parse.o strmap.o \
+      codegen/assignment.o codegen/conditional.o \
+      codegen/expression.o codegen/forloop.o \
+      codegen/function.o codegen/return.o \
+      codegen/statement.o codegen/codegen.o
+OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
+
+$(ODIR)/%.o: src/%.c
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+build: $(OBJ)
 	$(CC) -o jlang $^ $(CFLAGS) $(LDFLAGS)
 
-%.o: %.c
-	$(CC) -c -o $@ $< $(CFLAGS) 
+.PHONY: clean
 
 clean:
-	rm -f jlang src/*.o test/*.o
-
+	rm -f $(ODIR)/*.o $(ODIR)/codegen/*.o *~ core # $(INCDIR)/*~ 
 

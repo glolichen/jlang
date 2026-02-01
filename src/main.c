@@ -7,7 +7,7 @@
 #include "lex.h"
 #include "ast.h"
 #include "parse.h"
-#include "codegen.h"
+#include "codegen/codegen.h"
 
 size_t count_lines(FILE *file) {
 	size_t lines = 0;
