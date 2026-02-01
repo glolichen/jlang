@@ -38,7 +38,7 @@
 
 	answerdigits = 0;
 	maxpower = 1;
-	for (maxpower = 1; maxpower <= answer; maxpower = maxpower * 10) { }
+	for (; maxpower <= answer; maxpower = maxpower * 10) { }
 
 	for (power = maxpower / 10; power >= 1; power = power / 10) {
 		digit = answer / power;

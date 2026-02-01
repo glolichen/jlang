@@ -40,20 +40,26 @@ void codegen_for_loop(
 	LLVMBasicBlockRef after_block = LLVMAppendBasicBlock(func, "forafter");
 
 	// evaluate end condition to decide whether to execute loop at all
-	LLVMValueRef end_condition = codegen_expression(
-		mod, build,
-		&node->value.children.l[1],
-		&var_map_loop, func_map
-	);
-	if (end_condition == NULL) {
-		fprintf(stderr, "ERROR! (21)\n");
-		exit(1);
+	// if the for loop condition is left blank, always true
+	LLVMValueRef end_condition;
+	if (node->value.children.l[1].value.children.size == 0)
+		end_condition = LLVMConstInt(LLVMInt1Type(), 1, 0);
+	else {
+		end_condition = codegen_expression(
+			mod, build,
+			&node->value.children.l[1],
+			&var_map_loop, func_map
+		);
+		if (end_condition == NULL) {
+			fprintf(stderr, "ERROR! (21)\n");
+			exit(1);
+		}
+		end_condition = LLVMBuildICmp(
+			build, LLVMIntNE, end_condition,
+			LLVMConstInt(LLVMInt32Type(), 0, 0),
+			"forcmptmp"
+		);
 	}
-	end_condition = LLVMBuildICmp(
-		build, LLVMIntNE, end_condition,
-		LLVMConstInt(LLVMInt32Type(), 0, 0),
-		"forcmptmp"
-	);
 	// if satisfies condition, run loop
 	// otherwise, go to loop after immediately
 	LLVMBuildCondBr(build, end_condition, body_block, after_block);
@@ -89,24 +95,28 @@ void codegen_for_loop(
 
 	// execute loop body and increment
 	codegen_stmt_list(mod, build, &node->value.children.l[3], &var_map_loop, func_map); 
-	if (node->value.children.l->value.children.size != 0)
+	if (node->value.children.l[2].value.children.size != 0)
 		codegen_assignment(mod, build, &node->value.children.l[2], &var_map_loop, func_map);
 
 	// check loop condition to decide ...
-	end_condition = codegen_expression(
-		mod, build,
-		&node->value.children.l[1],
-		&var_map_loop, func_map
-	);
-	if (end_condition == NULL) {
-		fprintf(stderr, "ERROR! (22)\n");
-		exit(1);
+	if (node->value.children.l[1].value.children.size == 0)
+		end_condition = LLVMConstInt(LLVMInt1Type(), 1, 0);
+	else {
+		end_condition = codegen_expression(
+			mod, build,
+			&node->value.children.l[1],
+			&var_map_loop, func_map
+		);
+		if (end_condition == NULL) {
+			fprintf(stderr, "ERROR! (21)\n");
+			exit(1);
+		}
+		end_condition = LLVMBuildICmp(
+			build, LLVMIntNE, end_condition,
+			LLVMConstInt(LLVMInt32Type(), 0, 0),
+			"forcmptmp"
+		);
 	}
-	end_condition = LLVMBuildICmp(
-		build, LLVMIntNE, end_condition,
-		LLVMConstInt(LLVMInt32Type(), 0, 0),
-		"forcmptmp"
-	);
 	// ... whether to execute again (branch to loop body block again)
 	// or to exit (branch to loop after block)
 	LLVMBasicBlockRef loop_block_end = LLVMGetInsertBlock(build);
