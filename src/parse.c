@@ -259,6 +259,7 @@ static bool parse_return(struct ast_node *node) {
 }
 
 static bool conditional(struct ast_node *node);
+static bool for_loop(struct ast_node *node);
 
 static bool statement(struct ast_node *node) {
 	if (is_type(LEX_SEMICOLON)) {
@@ -288,6 +289,12 @@ static bool statement(struct ast_node *node) {
 	ast_remove_node(node, new_index);
 	new_index = ast_insert_node(node, AST_CONDITIONAL);
 	if (conditional(&node->value.children.l[new_index]))
+		return true;
+
+	set_token(start_index);
+	ast_remove_node(node, new_index);
+	new_index = ast_insert_node(node, AST_FOR);
+	if (for_loop(&node->value.children.l[new_index]))
 		return true;
 
 	set_token(start_index);
@@ -347,6 +354,48 @@ static bool conditional(struct ast_node *node) {
 		if (!statement_list(&node->value.children.l[new_index]))
 			return false;
 	}
+
+	return true;
+}
+
+static bool for_loop(struct ast_node *node) {
+	if (!is_type(LEX_FOR))
+		return false;
+
+	next();
+
+	expect(LEX_LEFT_PAREN);
+	next();
+
+	size_t new_index = ast_insert_node(node, AST_ASSIGN);
+	if (!is_type(LEX_SEMICOLON)) {
+		if (!assignment(&node->value.children.l[new_index])) 
+			return false;
+		expect(LEX_SEMICOLON);
+	}
+
+	next();
+
+	new_index = ast_insert_node(node, AST_EXPR);
+	if (!is_type(LEX_SEMICOLON)) {
+		expression(&node->value.children.l[new_index]);
+		expect(LEX_SEMICOLON);
+	}
+
+	next();
+
+	new_index = ast_insert_node(node, AST_ASSIGN);
+	if (!is_type(LEX_RIGHT_PAREN)) {
+		if (!assignment(&node->value.children.l[new_index])) 
+			return false;
+		expect(LEX_RIGHT_PAREN);
+	}
+
+	next();
+
+	new_index = ast_insert_node(node, AST_STMT_LIST);
+	if (!statement_list(&node->value.children.l[new_index]))
+		return false;
 
 	return true;
 }

@@ -1,10 +1,15 @@
 {
 	a = getchar();
+	b = 0;
+	c = 3;
 	if (a == 98) {
 		putchar(89);
 	}
 	else {
+		b = 1;
 		putchar(78);
 	}
-	return a;
+	c = c * 3;
+	return b + c;
 }
+

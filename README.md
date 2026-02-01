@@ -10,12 +10,15 @@ Compiler for very minimal C-like language. Compiles to LLVM IR.
 <statement> ::= <assignment> ";"
              |  <func_call> ";"
              |  <return> ";"
-             |  <conditional> ";"
+             |  <conditional>
+             |  <for_loop>
              |  ";"
 
 <return> ::= <expression>
 
 <conditional> ::= "if" "(" <expression> ")" <statement_list> ["else" <statement_list>]
+
+<for_loop> ::= "for" "(" [<assignment>] ";" [<expression>] ";" [<assignment>] ")" <statement_list>
 
 <assignment> ::= identifier "=" <expression>
 
@@ -49,6 +52,7 @@ Didn't bother with inheritance (AST node is just a list of children).
  - `FUNC_CALL`: identifier, `EXPR_LIST` IN ALL CASES, IF PARAMS ARE VOID THEN `EXPR_LIST` LENGTH 0.
  - `EXPR_LIST`: list of `EXPRESSION`. LENGTH 0 IF PARAMS ARE VOID.
  - `CONDITIONAL`: `EXPRESSION`, `STMT_LIST`, (IF NO ELSE, NO MORE, IF THERE IS ELSE: `EXPRESSION`).
+ - `FOR`: `ASSIGNMENT` (initial), `CONDITIONAL` (termination condition), `ASSIGNMENT` (every cycle), `STMT_LIST` ALWAYS HAS 4 CHILDREN, CHILDREN HAVE NO CHILDREN IF LEFT EMPTY.
 
 ## Implementation Notes
 

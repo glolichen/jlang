@@ -17,6 +17,7 @@ enum ast_node_type {
 	AST_ASSIGN,
 	AST_FUNC_CALL,
 	AST_CONDITIONAL,
+	AST_FOR,
 	AST_RETURN
 };
 struct ast_node_list {

@@ -363,8 +363,10 @@ void codegen_conditional(
 		&node->value.children.l[0],
 		var_map, func_map
 	);
-	if (condition == NULL)
-		return;
+	if (condition == NULL) {
+		fprintf(stderr, "ERROR! (19)\n");
+		exit(1);
+	}
 
 	condition = LLVMBuildICmp(
 		build, LLVMIntNE, condition,
@@ -406,7 +408,7 @@ void codegen_conditional(
 	LLVMPositionBuilderAtEnd(build, merge_block);
 
 	// iterate through ALREADY DEFINED variables and assign with phi nodes
-	// TODO: but only do this if they have been modified by either block
+	// but only do this if they have been modified by either block
 	for (uint64_t i = 0; i < var_map->bucket_count; i++) {
 		struct strmap_list_node *cur = var_map->list[i];
 		while (cur != NULL) {
@@ -430,6 +432,8 @@ void codegen_conditional(
 
 			// printf("the phi value is %p\n", phi);
 
+			// need to strmap_set to copy the phi value into the var_map
+			// the var_map copies for then and else are free
 			strmap_set(var_map, cur->str, &phi, sizeof(LLVMValueRef));
 
 			cur = cur->next;
@@ -438,6 +442,126 @@ void codegen_conditional(
 	
 	strmap_free(&var_map_then);
 	strmap_free(&var_map_else);
+}
+
+void codegen_for_loop(
+	LLVMModuleRef mod, LLVMBuilderRef build,
+	const struct ast_node *node,
+	struct strmap *var_map,
+	struct strmap *func_map
+) {
+	// NOTE: adding the initial value both var_map and var_map_loop
+	// this is so that we can use a phi when setting the variable in the body of the loop
+	// this can be removed from the var_map at the end (if variable not declared/defined before)
+	// FIXME: have this removed, if it's not already declared
+	if (node->value.children.l[0].value.children.size != 0)
+		codegen_assignment(mod, build, &node->value.children.l[0], var_map, func_map);
+	struct strmap var_map_loop = strmap_copy(var_map);
+
+	LLVMValueRef func = LLVMGetBasicBlockParent(LLVMGetInsertBlock(build));
+
+	LLVMBasicBlockRef before_block = LLVMGetInsertBlock(build);
+	LLVMBasicBlockRef loop_block = LLVMAppendBasicBlock(func, "loop");
+
+	LLVMBuildBr(build, loop_block);
+	LLVMPositionBuilderAtEnd(build, loop_block);
+
+	// hack
+	// LLVMValueRef phi = LLVMBuildPhi(build, LLVMInt32Type(), "phitmp");
+	// LLVMValueRef value_before = *(LLVMValueRef *) strmap_get(var_map, "i");
+	// LLVMAddIncoming(phi, &value_before, &before_block, 1);
+	// strmap_set(&var_map_loop, "i", &phi, sizeof(LLVMValueRef));
+
+	// FIXME: need a phi on ALL variables, not just i like it is now
+	// because they might have been modified by the loop
+	// need to select the correct one based whether the loop has been executed before
+
+	struct strmap loop_phi_nodes = strmap_new();
+
+	for (uint64_t i = 0; i < var_map->bucket_count; i++) {
+		// linked list current node for var_map before loop (in "var_map" variable)
+		struct strmap_list_node *cur_before = var_map->list[i];
+		while (cur_before != NULL) {
+			LLVMValueRef phi = LLVMBuildPhi(build, LLVMInt32Type(), "phitmp");
+			LLVMValueRef value_before = *(LLVMValueRef *) cur_before->value;
+			LLVMAddIncoming(phi, &value_before, &before_block, 1);
+			strmap_set(&loop_phi_nodes, cur_before->str, &phi, sizeof(LLVMValueRef));
+			strmap_set(&var_map_loop, cur_before->str, &phi, sizeof(LLVMValueRef));
+
+			cur_before = cur_before->next;
+		}
+	}
+
+	codegen_stmt_list(mod, build, &node->value.children.l[3], &var_map_loop, func_map); 
+
+	codegen_assignment(mod, build, &node->value.children.l[2], &var_map_loop, func_map);
+
+	LLVMValueRef end_condition = codegen_expression(
+		mod, build,
+		&node->value.children.l[1],
+		&var_map_loop, func_map
+	);
+	if (end_condition == NULL) {
+		fprintf(stderr, "ERROR! (67)\n");
+		exit(1);
+	}
+	end_condition = LLVMBuildICmp(
+		build, LLVMIntNE, end_condition,
+		LLVMConstInt(LLVMInt32Type(), 0, 0),
+		"forcmptmp"
+	);
+
+	LLVMBasicBlockRef loop_block_end = LLVMGetInsertBlock(build);
+	LLVMBasicBlockRef after_block = LLVMAppendBasicBlock(func, "forcont");
+
+	LLVMBuildCondBr(build, end_condition, loop_block, after_block);
+
+	LLVMPositionBuilderAtEnd(build, after_block);
+
+	for (uint64_t i = 0; i < loop_phi_nodes.bucket_count; i++) {
+		// linked list current node for var_map before loop (in "var_map" variable)
+		struct strmap_list_node *cur_phi = loop_phi_nodes.list[i];
+		while (cur_phi != NULL) {
+			LLVMValueRef phi = *(LLVMValueRef *) cur_phi->value;
+			LLVMValueRef value_loop = *(LLVMValueRef *) strmap_get(&var_map_loop, cur_phi->str);
+			LLVMAddIncoming(phi, &value_loop, &loop_block_end, 1);
+
+			cur_phi = cur_phi->next;
+		}
+	}
+	// LLVMValueRef value_loop = *(LLVMValueRef *) strmap_get(&var_map_loop, "i");
+	// LLVMAddIncoming(phi, &value_loop, &loop_block_end, 1);
+
+
+
+
+	// printf("%p\n", *(LLVMValueRef *) strmap_get(&var_map_loop, "i"));
+
+	// strmap_set(var_map, "a", strmap_get(&var_map_loop, "i"), sizeof(LLVMValueRef));
+
+
+
+
+	// deal with merge blocks and add phi nodes
+	LLVMPositionBuilderAtEnd(build, after_block);
+
+	// iterate through ALREADY DEFINED variables and assign with phi nodes
+	// but only do this if they have been modified by either block
+	for (uint64_t i = 0; i < var_map->bucket_count; i++) {
+		struct strmap_list_node *cur = var_map->list[i];
+		while (cur != NULL) {
+			LLVMValueRef value_cur = *(LLVMValueRef *) cur->value;
+			LLVMValueRef value_loop = *(LLVMValueRef *) strmap_get(&var_map_loop, cur->str);
+
+			if (value_cur != value_loop)
+				strmap_set(var_map, cur->str, &value_loop, sizeof(LLVMValueRef));
+
+			cur = cur->next;
+		}
+	}
+	
+	strmap_free(&var_map_loop);
+	strmap_free(&loop_phi_nodes);
 }
 
 static void codegen_statement(
@@ -464,6 +588,9 @@ static void codegen_statement(
 			break;
 		case AST_CONDITIONAL:
 			codegen_conditional(mod, build, child, var_map, func_map);
+			break;
+		case AST_FOR:
+			codegen_for_loop(mod, build, child, var_map, func_map);
 			break;
 		default:
 			fprintf(stderr, "ERROR! (17)\n");
