@@ -10,7 +10,7 @@
 #include "ast.h"
 
 void codegen_return(
-	LLVMModuleRef mod, LLVMBuilderRef build,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map
@@ -27,7 +27,7 @@ void codegen_return(
 		exit(1);
 	}
 
-	LLVMValueRef value = codegen_expression(mod, build, &list->l[0], var_map, func_map);
+	LLVMValueRef value = codegen_expression(build, &list->l[0], var_map, func_map);
 	LLVMBuildRet(build, value);
 }
 

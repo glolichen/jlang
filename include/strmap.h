@@ -1,8 +1,9 @@
-#ifndef VARMAP_H
-#define VARMAP_H
+#ifndef STRMAP_H
+#define STRMAP_H
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 // highly discouraged to use this struct outside of strmap.c unless necessary!!
 // might be necessary: iterating through keys/values
@@ -22,6 +23,7 @@ struct strmap strmap_new();
 struct strmap strmap_copy(const struct strmap *old_map_ptr);
 void strmap_set(struct strmap *map_ptr, const char *str, void *value, size_t value_size);
 void *strmap_get(const struct strmap *map_ptr, const char *str);
+void *strmap_remove(struct strmap *map_ptr, const char *str, bool ret_value);
 void strmap_free(const struct strmap *map_ptr);
 
 #endif

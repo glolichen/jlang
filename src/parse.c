@@ -261,6 +261,20 @@ static bool parse_return(struct ast_node *node) {
 static bool conditional(struct ast_node *node);
 static bool for_loop(struct ast_node *node);
 
+static bool continue_break(struct ast_node *node) {
+	if (is_type(LEX_CONTINUE)) {
+		ast_insert_node(node, AST_CONTINUE);
+		next();
+		return true;
+	}
+	if (is_type(LEX_BREAK)) {
+		ast_insert_node(node, AST_BREAK);
+		next();
+		return true;
+	}
+	return false;
+}
+
 static bool statement(struct ast_node *node) {
 	if (is_type(LEX_SEMICOLON)) {
 		next();
@@ -306,6 +320,14 @@ static bool statement(struct ast_node *node) {
 		return true;
 	}
 
+	set_token(start_index);
+	ast_remove_node(node, new_index);
+	if (continue_break(node)) {
+		expect(LEX_SEMICOLON);
+		next();
+		return true;
+	}
+
 	return false;
 }
 
@@ -319,8 +341,7 @@ static bool statement_list(struct ast_node *node) {
 	size_t new_index;
 	do {
 		new_index = ast_insert_node(node, AST_STMT);
-	}
-	while (statement(&node->value.children.l[new_index]));
+	} while (statement(&node->value.children.l[new_index]));
 	ast_remove_node(node, new_index);
 
 	expect(LEX_RIGHT_BRACE);

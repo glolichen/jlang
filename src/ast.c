@@ -35,6 +35,10 @@ static const char *ast_node_type_to_str(enum ast_node_type type) {
 			return "FOR";
 		case AST_RETURN:
 			return "RETURN";
+		case AST_CONTINUE:
+			return "CONTINUE";
+		case AST_BREAK:
+			return "BREAK";
 	}
 	return "";
 }

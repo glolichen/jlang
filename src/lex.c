@@ -111,6 +111,10 @@ const char *lex_token_type_to_str(enum lex_token_type type) {
 			return "TRUE";
 		case LEX_WHILE:
 			return "WHILE";
+		case LEX_CONTINUE:
+			return "CONTINUE";
+		case LEX_BREAK:
+			return "BREAK";
 		case LEX_INT:
 			return "INT";
 		case LEX_CHAR:
@@ -136,6 +140,10 @@ static enum lex_token_type str_to_keyword(const char *str) {
 		return LEX_TRUE;
 	if (strcmp(str, "while") == 0)
 		return LEX_WHILE;
+	if (strcmp(str, "continue") == 0)
+		return LEX_CONTINUE;
+	if (strcmp(str, "break") == 0)
+		return LEX_BREAK;
 	if (strcmp(str, "int") == 0)
 		return LEX_INT;
 	if (strcmp(str, "char") == 0)

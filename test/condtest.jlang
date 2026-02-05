@@ -7,6 +7,9 @@
 			c = 1;
 			putchar(89);
 		}
+		else {
+			putchar(110);
+		}
 	}
 	return c;
 }

@@ -5,8 +5,14 @@
 #include "../strmap.h"
 #include "../ast.h"
 
+struct codegen_for_loop_context {
+	LLVMBasicBlockRef cond_block, after_block;
+};
+
+const struct codegen_for_loop_context *codegen_get_for_loop_context(void);
+
 void codegen_for_loop(
-	LLVMModuleRef mod, LLVMBuilderRef build,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map

@@ -13,37 +13,38 @@
 		n = n / 10;
 	}
 
-	loop_start = 0;
-	if (n <= 3) {
-		loop_start = n;
+	answer = 1;
+	if (n > 2) {
+		prev = 1;
+		prevprev = 1;
+		current = 2;
+		for (i = 0; i < n - 3; i = i + 1) {
+			next = prev + current;
+			prevprev = prev;
+			prev = current;
+			current = next;
+		}
+		answer = current;
+	}
+	else {
+		if (n <= 0) {
+			answer = 0;
+		}
 	}
 
-	prev = 1;
-	prevprev = 1;
-	current = 2;
-	for (i = loop_start; i < n - 3; i = i + 1) {
-		next = prev + current;
-		prevprev = prev;
-		prev = current;
-		current = next;
+	if (answer == 0) {
+		putchar(48);
 	}
+	else {
+		answerdigits = 0;
+		maxpower = 1;
+		for (; maxpower <= answer; maxpower = maxpower * 10) { }
 
-	answer = current;
-	if (n <= 2) {
-		answer = 1;
-	}
-	if (n <= 0) {
-		answer = 0;
-	}
-
-	answerdigits = 0;
-	maxpower = 1;
-	for (; maxpower <= answer; maxpower = maxpower * 10) { }
-
-	for (power = maxpower / 10; power >= 1; power = power / 10) {
-		digit = answer / power;
-		putchar(digit + 48);
-		answer = answer % power;
+		for (power = maxpower / 10; power >= 1; power = power / 10) {
+			digit = answer / power;
+			putchar(digit + 48);
+			answer = answer % power;
+		}
 	}
 
 	putchar(10);

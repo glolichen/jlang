@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "codegen/function.h"
+#include "codegen/codegen.h"
 #include "codegen/expression.h"
 #include "strmap.h"
 #include "ast.h"
@@ -48,7 +49,7 @@ void codegen_func_init(struct strmap *func_map) {
 }
 
 LLVMValueRef codegen_func_call(
-	LLVMModuleRef mod, LLVMBuilderRef build,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	const struct strmap *var_map,
 	struct strmap *func_map
@@ -71,7 +72,8 @@ LLVMValueRef codegen_func_call(
 
 	if (func_info->func == NULL) {
 		// this will modify the value in the map as well
-		func_info->func = LLVMAddFunction(mod, func_name, func_info->type);
+		LLVMModuleRef module = codegen_get_current_module();
+		func_info->func = LLVMAddFunction(module, func_name, func_info->type);
 	}
 		
 	struct ast_node_list *ast_params = &node->value.children.l[1].value.children;
@@ -98,7 +100,7 @@ LLVMValueRef codegen_func_call(
 	else {
 		params = malloc(ast_param_num * sizeof(LLVMValueRef));
 		for (size_t i = 0; i < ast_param_num; i++)
-			params[i] = codegen_expression(mod, build, &ast_params->l[i], var_map, func_map);
+			params[i] = codegen_expression(build, &ast_params->l[i], var_map, func_map);
 	}
 
 	LLVMValueRef out = LLVMBuildCall2(build, func_info->type, func_info->func, params, ast_param_num, "");

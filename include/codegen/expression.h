@@ -8,28 +8,28 @@
 
 LLVMValueRef codegen_number(const struct lex_token *token);
 LLVMValueRef codegen_factor(
-	LLVMModuleRef module, LLVMBuilderRef builder,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	const struct strmap *var_map,
 	struct strmap *func_map
 );
 
 LLVMValueRef codegen_term(
-	LLVMModuleRef mod, LLVMBuilderRef build,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	const struct strmap *var_map,
 	struct strmap *func_map
 );
 
 LLVMValueRef codegen_expr_no_comp(
-	LLVMModuleRef mod, LLVMBuilderRef build,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	const struct strmap *var_map,
 	struct strmap *func_map
 );
 
 LLVMValueRef codegen_expression(
-	LLVMModuleRef mod, LLVMBuilderRef build,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	const struct strmap *var_map,
 	struct strmap *func_map

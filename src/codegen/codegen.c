@@ -16,8 +16,14 @@
 #include "strmap.h"
 #include "ast.h"
 
+LLVMModuleRef module = NULL;
+
+LLVMModuleRef codegen_get_current_module(void) {
+	return module;
+}
+
 bool codegen(const char *name, const struct ast_node *root) {
-    LLVMModuleRef module = LLVMModuleCreateWithName(name);
+    module = LLVMModuleCreateWithName(name);
 
     LLVMTypeRef param_types[] = { };
     LLVMTypeRef ret_type = LLVMFunctionType(LLVMInt32Type(), param_types, 0, 0);
@@ -32,7 +38,7 @@ bool codegen(const char *name, const struct ast_node *root) {
 
 	struct strmap var_map = strmap_new(), func_map = strmap_new();
 	codegen_func_init(&func_map);
-	codegen_stmt_list(module, builder, &root->value.children.l[0], &var_map, &func_map);
+	codegen_stmt_list(builder, &root->value.children.l[0], &var_map, &func_map);
 
 	char *error = NULL;
 	LLVMVerifyModule(module, LLVMAbortProcessAction, &error);

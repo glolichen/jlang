@@ -16,7 +16,7 @@ LLVMValueRef codegen_number(const struct lex_token *token) {
 }
 
 LLVMValueRef codegen_factor(
-	LLVMModuleRef module, LLVMBuilderRef builder,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	const struct strmap *var_map,
 	struct strmap *func_map
@@ -24,7 +24,7 @@ LLVMValueRef codegen_factor(
 	const struct ast_node *child = &node->value.children.l[0];
 
 	if (child->type == AST_EXPR)
-		return codegen_expression(module, builder, child, var_map, func_map);
+		return codegen_expression(build, child, var_map, func_map);
 
 	if (child->type == AST_LEAF) {
 		if (child->value.token.type == LEX_NUMBER)
@@ -37,7 +37,7 @@ LLVMValueRef codegen_factor(
 		}
 	}
 	else if (child->type == AST_FUNC_CALL) {
-		LLVMValueRef value = codegen_func_call(module, builder, child, var_map, func_map);
+		LLVMValueRef value = codegen_func_call(build, child, var_map, func_map);
 		if (value != NULL)
 			return value;
 	}
@@ -47,7 +47,7 @@ LLVMValueRef codegen_factor(
 }
 
 LLVMValueRef codegen_term(
-	LLVMModuleRef mod, LLVMBuilderRef build,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	const struct strmap *var_map,
 	struct strmap *func_map
@@ -58,7 +58,7 @@ LLVMValueRef codegen_term(
 	}
 
 	const struct ast_node_list *list = &node->value.children;
-	LLVMValueRef lhs = codegen_factor(mod, build, &list->l[0], var_map, func_map);
+	LLVMValueRef lhs = codegen_factor(build, &list->l[0], var_map, func_map);
 
 	size_t i;
 	for (i = 1; i < list->size - 1; i += 2) {
@@ -67,7 +67,7 @@ LLVMValueRef codegen_term(
 			exit(1);
 		}
 
-		LLVMValueRef rhs = codegen_factor(mod, build, &list->l[i + 1], var_map, func_map);
+		LLVMValueRef rhs = codegen_factor(build, &list->l[i + 1], var_map, func_map);
 
 		switch (list->l[i].value.token.type) {
 			case LEX_STAR:
@@ -94,7 +94,7 @@ LLVMValueRef codegen_term(
 }
 
 LLVMValueRef codegen_expr_no_comp(
-	LLVMModuleRef mod, LLVMBuilderRef build,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	const struct strmap *var_map,
 	struct strmap *func_map
@@ -115,7 +115,7 @@ LLVMValueRef codegen_expr_no_comp(
 		i++;
 	}
 
-	LLVMValueRef lhs = codegen_term(mod, build, &list->l[i], var_map, func_map);
+	LLVMValueRef lhs = codegen_term(build, &list->l[i], var_map, func_map);
 	if (first_is_negative)
 		lhs = LLVMBuildMul(build, lhs, LLVMConstInt(LLVMInt32Type(), -1, 0), "negtmp");
 
@@ -125,7 +125,7 @@ LLVMValueRef codegen_expr_no_comp(
 			exit(1);
 		}
 
-		LLVMValueRef rhs = codegen_term(mod, build, &list->l[i + 1], var_map, func_map);
+		LLVMValueRef rhs = codegen_term(build, &list->l[i + 1], var_map, func_map);
 
 		if (list->l[i].value.token.type == LEX_PLUS)
 			lhs = LLVMBuildAdd(build, lhs, rhs, "addtmp");
@@ -142,7 +142,7 @@ LLVMValueRef codegen_expr_no_comp(
 }
 
 LLVMValueRef codegen_expression(
-	LLVMModuleRef mod, LLVMBuilderRef build,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	const struct strmap *var_map,
 	struct strmap *func_map
@@ -156,12 +156,12 @@ LLVMValueRef codegen_expression(
 
 	// not comparison, only child is expr_no_comp
 	if (list->size == 1)
-		return codegen_expr_no_comp(mod, build, &list->l[0], var_map, func_map);
+		return codegen_expr_no_comp(build, &list->l[0], var_map, func_map);
 
 	if (list->size == 3) {
-		LLVMValueRef lhs = codegen_expr_no_comp(mod, build, &list->l[0], var_map, func_map);
+		LLVMValueRef lhs = codegen_expr_no_comp(build, &list->l[0], var_map, func_map);
 		enum lex_token_type comp_type = list->l[1].value.token.type;
-		LLVMValueRef rhs = codegen_expr_no_comp(mod, build, &list->l[2], var_map, func_map);
+		LLVMValueRef rhs = codegen_expr_no_comp(build, &list->l[2], var_map, func_map);
 
 		LLVMIntPredicate comp_pred;
 		switch (comp_type) {

@@ -13,7 +13,7 @@
 #include "ast.h"
 
 static void codegen_conditional_if_then(
-	LLVMModuleRef mod, LLVMBuilderRef build,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map,
@@ -29,7 +29,7 @@ static void codegen_conditional_if_then(
 
 	LLVMPositionBuilderAtEnd(build, then_block);
 	struct strmap var_map_then = strmap_copy(var_map);
-	codegen_stmt_list(mod, build, &node->value.children.l[1], &var_map_then, func_map);
+	codegen_stmt_list(build, &node->value.children.l[1], &var_map_then, func_map);
 
 	LLVMBuildBr(build, after_block);
 	then_block = LLVMGetInsertBlock(build);
@@ -64,7 +64,7 @@ static void codegen_conditional_if_then(
 }
 
 static void codegen_conditional_if_then_else(
-	LLVMModuleRef mod, LLVMBuilderRef build,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map,
@@ -81,7 +81,7 @@ static void codegen_conditional_if_then_else(
 	// generate then block and add merge block to terminate it
 	LLVMPositionBuilderAtEnd(build, then_block);
 	struct strmap var_map_then = strmap_copy(var_map);
-	codegen_stmt_list(mod, build, &node->value.children.l[1], &var_map_then, func_map);
+	codegen_stmt_list(build, &node->value.children.l[1], &var_map_then, func_map);
 
 	LLVMBuildBr(build, merge_block);
 	then_block = LLVMGetInsertBlock(build);
@@ -89,7 +89,7 @@ static void codegen_conditional_if_then_else(
 	// generate else block and add merge block to terminate it
 	LLVMPositionBuilderAtEnd(build, else_block);
 	struct strmap var_map_else = strmap_copy(var_map);
-	codegen_stmt_list(mod, build, &node->value.children.l[2], &var_map_else, func_map);
+	codegen_stmt_list(build, &node->value.children.l[2], &var_map_else, func_map);
 
 	LLVMBuildBr(build, merge_block);
 	else_block = LLVMGetInsertBlock(build);
@@ -128,13 +128,13 @@ static void codegen_conditional_if_then_else(
 
 // will modify var_map using phi nodes
 void codegen_conditional(
-	LLVMModuleRef mod, LLVMBuilderRef build,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {
 	LLVMValueRef condition = codegen_expression(
-		mod, build,
+		build,
 		&node->value.children.l[0],
 		var_map, func_map
 	);
@@ -150,10 +150,10 @@ void codegen_conditional(
 
 	// 2 = no else (if then)
 	if (node->value.children.size == 2)
-		codegen_conditional_if_then(mod, build, node, var_map, func_map, condition);
+		codegen_conditional_if_then(build, node, var_map, func_map, condition);
 	// 3 = has else (if then else)
 	else if (node->value.children.size == 3)
-		codegen_conditional_if_then_else(mod, build, node, var_map, func_map, condition);
+		codegen_conditional_if_then_else(build, node, var_map, func_map, condition);
 	else {
 		fprintf(stderr, "ERROR! (20)");
 		exit(1);

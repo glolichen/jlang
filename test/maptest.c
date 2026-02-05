@@ -49,14 +49,29 @@ int main() {
 
 	for (int op = 1; op <= OPS; op++) {
 		if (op % TEST_EVERY == 0) {
+			int index = randint(0, NUM_STR - 1);
+
+			// int value = *(int *) strmap_get(&map, strs[index]);
+			// strmap_remove(&map, strs[index], false);
+
+			void *value_ptr = strmap_remove(&map, strs[index], true);
+			int value = *(int *) value_ptr;
+
 			for (int i = 0; i < NUM_STR; i++) {
 				const char *str = strs[i];
-				int map_value = *(int *) strmap_get(&map, str);
+				void *map_value_ptr = strmap_get(&map, str);
+				if (i == index && map_value_ptr == NULL)
+					continue;
+				int map_value = *(int *) map_value_ptr;
 				if (map_value != values[i]) {
 					fprintf(stderr, "ERROR! op %d\n", op);
 					goto cleanup;
 				}
 			}
+
+			strmap_set(&map, strs[index], &value, sizeof(value));
+
+			free(value_ptr);
 		}
 		if (op % PRINT_EVERY == 0) {
 			printf("%d/%d ok\n", op, OPS);

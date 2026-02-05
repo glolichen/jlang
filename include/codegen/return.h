@@ -6,7 +6,7 @@
 #include "../ast.h"
 
 void codegen_return(
-	LLVMModuleRef mod, LLVMBuilderRef build,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map

@@ -53,6 +53,7 @@ Didn't bother with inheritance (AST node is just a list of children).
  - `EXPR_LIST`: list of `EXPRESSION`. LENGTH 0 IF PARAMS ARE VOID.
  - `CONDITIONAL`: `EXPRESSION`, `STMT_LIST`, (IF NO ELSE, NO MORE, IF THERE IS ELSE: `EXPRESSION`).
  - `FOR`: `ASSIGNMENT` (initial), `CONDITIONAL` (termination condition), `ASSIGNMENT` (every cycle), `STMT_LIST` ALWAYS HAS 4 CHILDREN, CHILDREN HAVE NO CHILDREN IF LEFT EMPTY.
+ - `CONTINUE`/`BREAK`: no children
 
 ## Implementation Notes
 

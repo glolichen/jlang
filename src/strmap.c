@@ -165,6 +165,45 @@ void strmap_set(struct strmap *map_ptr, const char *str, void *value, size_t val
 	strmap_set_internal(map_ptr, str, value, value_size, true);
 }
 
+// if ret_value = true, function will return pointer to value
+// the returned pointer must be freed at some point
+// if ret_value = false, this will always return NULL
+void *strmap_remove(struct strmap *map_ptr, const char *str, bool ret_value) {
+	struct strmap_list_node **map = map_ptr->list;
+
+	uint64_t hash = djb2_hash((const unsigned char *) str);
+
+	struct strmap_list_node **head = &map[hash % map_ptr->bucket_count];
+	if (strcmp((*head)->str, str) == 0) {
+		void *value = ret_value ? (*head)->value : NULL;
+		struct strmap_list_node *next = (*head)->next;
+		if (!ret_value)
+			free((*head)->value);
+		free(*head);
+		*head = next;
+		return value;
+	}
+
+	struct strmap_list_node *prev = *head;
+	struct strmap_list_node *cur = prev->next;
+
+	while (cur != NULL) {
+		if (strcmp(cur->str, str) == 0) {
+			void *value = ret_value ? cur->value : NULL;
+			struct strmap_list_node *next = cur->next;
+			if (!ret_value)
+				free(cur->value);
+			free(cur);
+			prev->next = next;
+			return value;
+		}
+		prev = cur;
+		cur = cur->next;
+	}
+
+	return NULL;
+}
+
 // will free all VALUES (these have been copied from original, by strmap_set)
 // will not free KEYS (strings)
 void strmap_free(const struct strmap *map_ptr) {

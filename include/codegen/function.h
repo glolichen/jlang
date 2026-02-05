@@ -8,7 +8,7 @@
 void codegen_func_init(struct strmap *func_map);
 
 LLVMValueRef codegen_func_call(
-	LLVMModuleRef mod, LLVMBuilderRef build,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	const struct strmap *var_map,
 	struct strmap *func_map

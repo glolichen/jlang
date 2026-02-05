@@ -12,7 +12,7 @@
 #include "lex.h"
 
 void codegen_assignment(
-	LLVMModuleRef mod, LLVMBuilderRef build,
+	LLVMBuilderRef build,
 	const struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map
@@ -30,7 +30,7 @@ void codegen_assignment(
 	}
 
 	const struct lex_token *ident = &list->l[0].value.token;
-	LLVMValueRef rhs = codegen_expression(mod, build, &list->l[1], var_map, func_map);
+	LLVMValueRef rhs = codegen_expression(build, &list->l[1], var_map, func_map);
 	strmap_set(var_map, ident->str, &rhs, sizeof(LLVMValueRef));
 }
 
