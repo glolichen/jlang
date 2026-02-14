@@ -13,11 +13,12 @@ LDFLAGS = `llvm-config --cxxflags --ldflags --libs mcjit core executionengine in
 IDIR = include
 ODIR = obj
 
-_OBJ = main.o lex.o ast.o parse.o strmap.o \
-      codegen/assignment.o codegen/conditional.o \
-      codegen/expression.o codegen/forloop.o \
-      codegen/function.o codegen/return.o \
-      codegen/statement.o codegen/codegen.o
+_OBJ = main.o lex.o ast.o parse.o \
+       utils/strmap.o utils/linkedlist.o \
+       codegen/assignment.o codegen/conditional.o \
+       codegen/expression.o codegen/forloop.o \
+       codegen/function.o codegen/return.o \
+       codegen/statement.o codegen/codegen.o
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: src/%.c

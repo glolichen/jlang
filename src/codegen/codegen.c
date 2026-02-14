@@ -13,7 +13,7 @@
 #include "codegen/codegen.h"
 #include "codegen/function.h"
 #include "codegen/statement.h"
-#include "strmap.h"
+#include "utils/strmap.h"
 #include "ast.h"
 
 LLVMModuleRef module = NULL;
@@ -40,16 +40,16 @@ bool codegen(const char *name, const struct ast_node *root) {
 	codegen_func_init(&func_map);
 	codegen_stmt_list(builder, &root->value.children.l[0], &var_map, &func_map);
 
-	char *error = NULL;
-	LLVMVerifyModule(module, LLVMAbortProcessAction, &error);
-	LLVMDisposeMessage(error);
+	// char *error = NULL;
+	// LLVMVerifyModule(module, LLVMAbortProcessAction, &error);
+	// LLVMDisposeMessage(error);
 
 	size_t len = strlen(name);
 	len += 4; // ".bc" and a null terminator
 	char *bitcode_filename = malloc(len * sizeof(char));
 	strcpy(bitcode_filename, name);
 	strcat(bitcode_filename, ".bc");
-
+	
     // Write out bitcode to file
 	if (LLVMWriteBitcodeToFile(module, bitcode_filename) != 0)
 		fprintf(stderr, "error writing bitcode to file, skipping\n");

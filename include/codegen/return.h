@@ -2,8 +2,8 @@
 #define CODEGEN_RETURN_H
 
 #include <llvm-c/Core.h>
-#include "../strmap.h"
-#include "../ast.h"
+#include "utils/strmap.h"
+#include "ast.h"
 
 void codegen_return(
 	LLVMBuilderRef build,

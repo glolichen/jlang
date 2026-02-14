@@ -9,7 +9,7 @@
 #include "codegen/conditional.h"
 #include "codegen/statement.h"
 #include "codegen/expression.h"
-#include "strmap.h"
+#include "utils/strmap.h"
 #include "ast.h"
 
 static void codegen_conditional_if_then(
@@ -22,21 +22,21 @@ static void codegen_conditional_if_then(
 	LLVMValueRef func = LLVMGetBasicBlockParent(LLVMGetInsertBlock(build));
 
 	LLVMBasicBlockRef before_block = LLVMGetInsertBlock(build);
-	LLVMBasicBlockRef then_block = LLVMAppendBasicBlock(func, "then");
+	LLVMBasicBlockRef then_block = LLVMAppendBasicBlock(func, "ifthen");
 	LLVMBasicBlockRef after_block = LLVMAppendBasicBlock(func, "ifcont");
 
 	LLVMBuildCondBr(build, condition, then_block, after_block);
 
 	LLVMPositionBuilderAtEnd(build, then_block);
 	struct strmap var_map_then = strmap_copy(var_map);
-	codegen_stmt_list(build, &node->value.children.l[1], &var_map_then, func_map);
-
-	LLVMBuildBr(build, after_block);
+	bool terminated = codegen_stmt_list(build, &node->value.children.l[1], &var_map_then, func_map);
+	if (!terminated)
+		LLVMBuildBr(build, after_block);
 	then_block = LLVMGetInsertBlock(build);
 
 	LLVMPositionBuilderAtEnd(build, after_block);
 
-	// iterate through ALREADY DEFINED variables and assign with phi nodes
+	// iterate through ALREADY DEFINED variables and assign with phi nodesconditio
 	// but only do this if they have been modified by either block
 	for (uint64_t i = 0; i < var_map->bucket_count; i++) {
 		struct strmap_list_node *cur_before = var_map->list[i];
@@ -72,8 +72,8 @@ static void codegen_conditional_if_then_else(
 ) {
 	LLVMValueRef func = LLVMGetBasicBlockParent(LLVMGetInsertBlock(build));
 
-	LLVMBasicBlockRef then_block = LLVMAppendBasicBlock(func, "then");
-	LLVMBasicBlockRef else_block = LLVMAppendBasicBlock(func, "else");
+	LLVMBasicBlockRef then_block = LLVMAppendBasicBlock(func, "ifthen");
+	LLVMBasicBlockRef else_block = LLVMAppendBasicBlock(func, "ifelse");
 	LLVMBasicBlockRef merge_block = LLVMAppendBasicBlock(func, "ifcont");
 
 	LLVMBuildCondBr(build, condition, then_block, else_block);
@@ -133,6 +133,12 @@ void codegen_conditional(
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {
+	LLVMValueRef func = LLVMGetBasicBlockParent(LLVMGetInsertBlock(build));
+
+	LLVMBasicBlockRef cond_block = LLVMAppendBasicBlock(func, "ifcond");
+	LLVMBuildBr(build, cond_block);
+	LLVMPositionBuilderAtEnd(build, cond_block);
+
 	LLVMValueRef condition = codegen_expression(
 		build,
 		&node->value.children.l[0],

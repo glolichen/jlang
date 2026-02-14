@@ -7,7 +7,7 @@
 
 #include "codegen/assignment.h"
 #include "codegen/expression.h"
-#include "strmap.h"
+#include "utils/strmap.h"
 #include "ast.h"
 #include "lex.h"
 

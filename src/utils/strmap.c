@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "strmap.h"
+#include "utils/strmap.h"
 
 #define STRMAP_STARTING_BUCKETS 100
 #define STRMAP_REHASH_FACTOR 0.75

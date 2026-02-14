@@ -2,9 +2,9 @@
 #define CODEGEN_EXPRESSION_H
 
 #include <llvm-c/Core.h>
-#include "../strmap.h"
-#include "../ast.h"
-#include "../lex.h"
+#include "utils/strmap.h"
+#include "ast.h"
+#include "lex.h"
 
 LLVMValueRef codegen_number(const struct lex_token *token);
 LLVMValueRef codegen_factor(

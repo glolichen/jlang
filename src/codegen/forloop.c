@@ -10,13 +10,13 @@
 #include "codegen/assignment.h"
 #include "codegen/expression.h"
 #include "codegen/statement.h"
-#include "strmap.h"
+#include "utils/strmap.h"
 #include "ast.h"
 
 struct codegen_for_loop_context loop_context = { NULL, NULL };
 
 const struct codegen_for_loop_context *codegen_get_for_loop_context(void) {
-	if (loop_context.cond_block == NULL || loop_context.after_block == NULL)
+	if (loop_context.body_block == NULL || loop_context.after_phi_block == NULL)
 		return NULL;
 	return &loop_context;
 }
@@ -53,7 +53,11 @@ void codegen_for_loop(
 	LLVMBasicBlockRef before_block = LLVMGetInsertBlock(build);
 	LLVMBasicBlockRef body_block = LLVMAppendBasicBlock(func, "forbody");
 	LLVMBasicBlockRef cond_block = LLVMAppendBasicBlock(func, "forcond");
-	LLVMBasicBlockRef after_block = LLVMAppendBasicBlock(func, "forafter");
+	LLVMBasicBlockRef after_phi_block = LLVMAppendBasicBlock(func, "forafterphi");
+
+	loop_context.body_block = body_block;
+	loop_context.after_phi_block = after_phi_block;
+	loop_context.for_node = node;
 
 	// evaluate end condition to decide whether to execute loop at all
 	// if the for loop condition is left blank, always true
@@ -78,7 +82,7 @@ void codegen_for_loop(
 	}
 	// if satisfies condition, run loop
 	// otherwise, go to loop after immediately
-	LLVMBuildCondBr(build, end_condition, body_block, after_block);
+	LLVMBuildCondBr(build, end_condition, body_block, after_phi_block);
 
 	LLVMPositionBuilderAtEnd(build, body_block);
 
@@ -86,6 +90,7 @@ void codegen_for_loop(
 	// value changes depending on whether we are just entering or
 	// if loop body has already executed previously
 	// make new string map to save phi nodes for each variable
+	// TODO: this doesn't have to be a hash table, a list of pairs is ok
 	struct strmap loop_phi_nodes = strmap_new();
 	for (uint64_t i = 0; i < var_map->bucket_count; i++) {
 		// linked list current node for var_map before loop (in "var_map" variable)
@@ -108,15 +113,17 @@ void codegen_for_loop(
 			cur_before = cur_before->next;
 		}
 	}
+	loop_context.loop_phi_nodes = &loop_phi_nodes;
 
 	codegen_stmt_list(build, &node->value.children.l[3], &var_map_loop, func_map); 
-
-	if (node->value.children.l[2].value.children.size != 0)
-		codegen_assignment(build, &node->value.children.l[2], &var_map_loop, func_map);
 
 	// check loop condition to decide ...
 	LLVMBuildBr(build, cond_block);
 	LLVMPositionBuilderAtEnd(build, cond_block);
+
+	if (node->value.children.l[2].value.children.size != 0)
+		codegen_assignment(build, &node->value.children.l[2], &var_map_loop, func_map);
+
 	if (node->value.children.l[1].value.children.size == 0)
 		end_condition = LLVMConstInt(LLVMInt1Type(), 1, 0);
 	else {
@@ -138,9 +145,9 @@ void codegen_for_loop(
 	// ... whether to execute again (branch to loop body block again)
 	// or to exit (branch to loop after block)
 	LLVMBasicBlockRef loop_block_end = LLVMGetInsertBlock(build);
-	LLVMBuildCondBr(build, end_condition, body_block, after_block);
+	LLVMBuildCondBr(build, end_condition, body_block, after_phi_block);
 
-	LLVMPositionBuilderAtEnd(build, after_block);
+	LLVMPositionBuilderAtEnd(build, after_phi_block);
 
 	// modify the original phi nodes created in the map earlier
 	// add an possible incoming block, which is from itself
@@ -152,12 +159,11 @@ void codegen_for_loop(
 			LLVMValueRef phi = *(LLVMValueRef *) cur_phi->value;
 			LLVMValueRef value_loop = *(LLVMValueRef *) strmap_get(&var_map_loop, cur_phi->str);
 			LLVMAddIncoming(phi, &value_loop, &loop_block_end, 1);
-
 			cur_phi = cur_phi->next;
 		}
 	}
 
-	LLVMPositionBuilderAtEnd(build, after_block);
+	LLVMPositionBuilderAtEnd(build, after_phi_block);
 
 	// iterate through ALREADY DEFINED variables and assign with phi nodes
 	// value depends on whether the loop iterated at all
@@ -184,10 +190,10 @@ void codegen_for_loop(
 		}
 	}
 
+	// strmap_remove(var_map, loop_assign_var, false);
+
 	strmap_free(&var_map_loop);
 	strmap_free(&loop_phi_nodes);
-
-	strmap_remove(var_map, loop_assign_var, false);
 
 	loop_context = before_ctx;
 }

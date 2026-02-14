@@ -2,11 +2,13 @@
 #define CODEGEN_FORLOOP_H
 
 #include <llvm-c/Core.h>
-#include "../strmap.h"
-#include "../ast.h"
+#include "utils/strmap.h"
+#include "ast.h"
 
 struct codegen_for_loop_context {
-	LLVMBasicBlockRef cond_block, after_block;
+	LLVMBasicBlockRef body_block, after_phi_block;
+	struct strmap *loop_phi_nodes;
+	const struct ast_node *for_node;
 };
 
 const struct codegen_for_loop_context *codegen_get_for_loop_context(void);
