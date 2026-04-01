@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "utils/linkedlist.h"
 
 struct ll_list_node *ll_new(void) {
@@ -14,12 +15,8 @@ void ll_add(struct ll_list_node **ll_head, void *data) {
 		return;
 	}
 
-	struct ll_list_node *cur = *ll_head;
-	while (cur->next != NULL) {
-		cur = cur->next;
-	}
-
-	cur->next = new_node;
+	new_node->next = *ll_head;
+	*ll_head = new_node;
 }
 void ll_free(struct ll_list_node **ll_head) {
 	struct ll_list_node *cur = *ll_head, *next = cur;

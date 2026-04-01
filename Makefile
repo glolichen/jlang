@@ -30,5 +30,5 @@ build: $(OBJ)
 .PHONY: clean
 
 clean:
-	rm -f $(ODIR)/*.o $(ODIR)/codegen/*.o *~ core # $(INCDIR)/*~ 
+	rm -f $(ODIR)/*.o $(ODIR)/codegen/*.o $(ODIR)/utils/*.o *~ core # $(INCDIR)/*~ 
 

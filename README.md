@@ -61,7 +61,7 @@ If a variable is assigned for the first time in a block (such as a conditional),
 
 ## Known Bugs
  - Nested if broken
- - Variable declared in for loop assignment (for (i = 0; ...)) remains in scope after loop termination
+ - Cannot have `break` inside loop body itself (not inside an another scope within the loop) ("Invalid instruction with no BB")
  - Cannot return from before end of body
 
 ## LLVM

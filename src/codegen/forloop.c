@@ -10,15 +10,97 @@
 #include "codegen/assignment.h"
 #include "codegen/expression.h"
 #include "codegen/statement.h"
+#include "utils/linkedlist.h"
 #include "utils/strmap.h"
 #include "ast.h"
 
-struct codegen_for_loop_context loop_context = { NULL, NULL };
+struct break_statement {
+	struct strmap var_map;
+	LLVMBasicBlockRef block;
+};
+struct for_loop_context {
+	LLVMBasicBlockRef body_block, after_phi_block;
+	struct strmap *loop_phi_nodes;
+	const struct ast_node *for_node;
+	struct ll_list_node *break_statements;
+};
 
-const struct codegen_for_loop_context *codegen_get_for_loop_context(void) {
-	if (loop_context.body_block == NULL || loop_context.after_phi_block == NULL)
-		return NULL;
-	return &loop_context;
+struct for_loop_context context;
+
+void codegen_continue(
+	LLVMBuilderRef build,
+	struct strmap *var_map,
+	struct strmap *func_map
+) {
+	// const struct for_loop_context *loop_ctx = codegen_get_for_loop_context();
+	// if (loop_ctx == NULL) {
+	// 	fprintf(stderr, "ERROR! continue/break outside loop\n");
+	// 	exit(1);
+	// }
+	//
+	// LLVMBasicBlockRef continue_block = LLVMGetInsertBlock(build);
+	// for (uint64_t i = 0; i < loop_ctx->loop_phi_nodes->bucket_count; i++) {
+	// 	struct strmap_list_node *cur_phi = loop_ctx->loop_phi_nodes->list[i];
+	// 	while (cur_phi != NULL) {
+	// 		LLVMValueRef phi = *(LLVMValueRef *) cur_phi->value;
+	// 		LLVMValueRef value_cur = *(LLVMValueRef *) strmap_get(var_map, cur_phi->str);
+	// 		LLVMAddIncoming(phi, &value_cur, &continue_block, 1);
+	// 		cur_phi = cur_phi->next;
+	// 	}
+	// }
+	//
+	// const struct ast_node *for_node = loop_ctx->for_node;
+	//
+	// if (for_node->value.children.l[2].value.children.size != 0)
+	// 	codegen_assignment(build, &for_node->value.children.l[2], var_map, func_map);
+	//
+	// LLVMValueRef end_condition;
+	// if (for_node->value.children.l[1].value.children.size == 0)
+	// 	end_condition = LLVMConstInt(LLVMInt1Type(), 1, 0);
+	// else {
+	// 	end_condition = codegen_expression(
+	// 		build,
+	// 		&for_node->value.children.l[1],
+	// 		var_map, func_map
+	// 	);
+	// 	if (end_condition == NULL) {
+	// 		fprintf(stderr, "ERROR! (21)\n");
+	// 		exit(1);
+	// 	}
+	// 	end_condition = LLVMBuildICmp(
+	// 		build, LLVMIntNE, end_condition,
+	// 		LLVMConstInt(LLVMInt32Type(), 0, 0),
+	// 		"forcmptmp"
+	// 	);
+	// }
+	// LLVMBuildCondBr(build, end_condition, loop_ctx->body_block, loop_ctx->after_phi_block);
+
+	// LLVMBuildBr(build, loop_ctx->cond_block);
+}
+
+void codegen_break(
+	LLVMBuilderRef build,
+	const struct strmap *var_map
+) {
+	// if body block is null then the context = {0} => called outside loop
+	if (context.body_block == NULL) {
+		fprintf(stderr, "ERROR! continue/break outside loop\n");
+		exit(1);
+	}
+
+	struct break_statement *cur_break = malloc(sizeof(struct break_statement));
+	cur_break->var_map = strmap_copy(var_map);
+	cur_break->block = LLVMAppendBasicBlock(
+		LLVMGetBasicBlockParent(LLVMGetInsertBlock(build)),
+		"breakblock"
+	);
+
+	LLVMBuildBr(build, cur_break->block);
+	LLVMPositionBuilderAtEnd(build, cur_break->block);
+
+	LLVMBuildBr(build, context.after_phi_block);
+
+	ll_add(&context.break_statements, cur_break);
 }
 
 void codegen_for_loop(
@@ -28,7 +110,7 @@ void codegen_for_loop(
 	struct strmap *func_map
 ) {
 	// for nested loops, restore previous context
-	struct codegen_for_loop_context before_ctx = loop_context;
+	struct for_loop_context before_ctx = context;
 
 	// adding the initial value both var_map and var_map_loop
 	// this is so that we can use a phi when setting the variable in the body of the loop
@@ -55,9 +137,10 @@ void codegen_for_loop(
 	LLVMBasicBlockRef cond_block = LLVMAppendBasicBlock(func, "forcond");
 	LLVMBasicBlockRef after_phi_block = LLVMAppendBasicBlock(func, "forafterphi");
 
-	loop_context.body_block = body_block;
-	loop_context.after_phi_block = after_phi_block;
-	loop_context.for_node = node;
+	context.break_statements = ll_new();
+	context.body_block = body_block;
+	context.after_phi_block = after_phi_block;
+	context.for_node = node;
 
 	// evaluate end condition to decide whether to execute loop at all
 	// if the for loop condition is left blank, always true
@@ -113,7 +196,7 @@ void codegen_for_loop(
 			cur_before = cur_before->next;
 		}
 	}
-	loop_context.loop_phi_nodes = &loop_phi_nodes;
+	context.loop_phi_nodes = &loop_phi_nodes;
 
 	codegen_stmt_list(build, &node->value.children.l[3], &var_map_loop, func_map); 
 
@@ -163,18 +246,16 @@ void codegen_for_loop(
 		}
 	}
 
-	LLVMPositionBuilderAtEnd(build, after_phi_block);
-
 	// iterate through ALREADY DEFINED variables and assign with phi nodes
 	// value depends on whether the loop iterated at all
 	for (uint64_t i = 0; i < var_map->bucket_count; i++) {
-		struct strmap_list_node *cur_before = var_map->list[i];
-		while (cur_before != NULL) {
-			LLVMValueRef value_before = *(LLVMValueRef *) cur_before->value;
-			LLVMValueRef value_loop = *(LLVMValueRef *) strmap_get(&var_map_loop, cur_before->str);
+		struct strmap_list_node *cur_before_loop = var_map->list[i];
+		while (cur_before_loop != NULL) {
+			LLVMValueRef value_before = *(LLVMValueRef *) cur_before_loop->value;
+			LLVMValueRef value_loop = *(LLVMValueRef *) strmap_get(&var_map_loop, cur_before_loop->str);
 
 			if (value_before == value_loop) {
-				cur_before = cur_before->next;
+				cur_before_loop = cur_before_loop->next;
 				continue;
 			}
 
@@ -184,16 +265,38 @@ void codegen_for_loop(
 			LLVMAddIncoming(phi, &value_before, &before_block, 1);
 			LLVMAddIncoming(phi, &value_loop, &loop_block_end, 1);
 
-			strmap_set(var_map, cur_before->str, &phi, sizeof(LLVMValueRef));
+			struct ll_list_node *cur = context.break_statements;
+			while (cur != NULL) {
+				struct break_statement *cur_break = cur->data;
 
-			cur_before = cur_before->next;
+				LLVMValueRef value_at_break = *(LLVMValueRef *) strmap_get(
+					&cur_break->var_map, cur_before_loop->str
+				);
+				LLVMAddIncoming(phi, &value_at_break, &cur_break->block, 1);
+
+				cur = cur->next;
+			}
+
+			strmap_set(var_map, cur_before_loop->str, &phi, sizeof(LLVMValueRef));
+
+			cur_before_loop = cur_before_loop->next;
 		}
 	}
 
-	// strmap_remove(var_map, loop_assign_var, false);
+	struct ll_list_node *cur = context.break_statements;
+	while (cur != NULL) {
+		struct break_statement *cur_break = cur->data;
+		strmap_free(&cur_break->var_map);
+		free(cur_break);
+		cur = cur->next;
+	}
+
+	strmap_remove(var_map, loop_assign_var, false);
 
 	strmap_free(&var_map_loop);
 	strmap_free(&loop_phi_nodes);
 
-	loop_context = before_ctx;
+	ll_free(&context.break_statements);
+
+	context = before_ctx;
 }
