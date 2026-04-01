@@ -26,26 +26,37 @@ struct function_info {
 	bool is_defined;
 };
 
-static void populate_builtin_funcs(struct strmap *func_map) {
+static void populate_builtin_funcs(
+	LLVMContextRef llvm_ctx,
+	struct strmap *func_map
+) {
 	struct function_info getchar_info = {
 		.func = NULL,
-		.type = LLVMFunctionType(LLVMInt8Type(), NULL, 0, 0),
+		.type = LLVMFunctionType(LLVMInt8TypeInContext(llvm_ctx), NULL, 0, 0),
 		.is_builtin = true,
 		.is_defined = false
 	};
 	strmap_set(func_map, "getchar", &getchar_info, sizeof(getchar_info));
 
-	LLVMTypeRef putchar_params[] = { LLVMInt32Type() };
+	LLVMTypeRef putchar_params[] = { LLVMInt32TypeInContext(llvm_ctx) };
 	struct function_info putchar_info = {
 		.func = NULL,
-		.type = LLVMFunctionType(LLVMVoidType(), putchar_params, NUM_PARAMS(putchar_params), 0),
+		.type = LLVMFunctionType(
+			LLVMVoidTypeInContext(llvm_ctx),
+			putchar_params,
+			NUM_PARAMS(putchar_params),
+			0
+		),
 		.is_builtin = true,
 		.is_defined = false
 	};
 	strmap_set(func_map, "putchar", &putchar_info, sizeof(putchar_info));
 }
-void codegen_func_init(struct strmap *func_map) {
-	populate_builtin_funcs(func_map);
+void codegen_func_init(
+	LLVMContextRef llvm_ctx,
+	struct strmap *func_map
+) {
+	populate_builtin_funcs(llvm_ctx, func_map);
 }
 
 LLVMValueRef codegen_func_call(
@@ -55,6 +66,8 @@ LLVMValueRef codegen_func_call(
 	struct strmap *func_map
 ) {
 	(void) var_map;
+
+	LLVMContextRef llvm_ctx = LLVMGetBuilderContext(build);
 
 	const char *func_name = node->value.children.l[0].value.token.str;
 	struct function_info *func_info = strmap_get(func_map, func_name);
@@ -88,7 +101,7 @@ LLVMValueRef codegen_func_call(
 		return LLVMBuildIntCast2(
 			build,
 			LLVMBuildCall2(build, func_info->type, func_info->func, NULL, 0, "getchartmp"),
-			LLVMInt32Type(),
+			LLVMInt32TypeInContext(llvm_ctx),
 			true,
 			"getcharcasttmp"
 		);

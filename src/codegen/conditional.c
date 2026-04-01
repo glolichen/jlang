@@ -19,11 +19,16 @@ static void codegen_conditional_if_then(
 	struct strmap *func_map,
 	LLVMValueRef condition
 ) {
+	LLVMContextRef llvm_ctx = LLVMGetBuilderContext(build);
 	LLVMValueRef func = LLVMGetBasicBlockParent(LLVMGetInsertBlock(build));
 
 	LLVMBasicBlockRef before_block = LLVMGetInsertBlock(build);
-	LLVMBasicBlockRef then_block = LLVMAppendBasicBlock(func, "ifthen");
-	LLVMBasicBlockRef after_block = LLVMAppendBasicBlock(func, "ifcont");
+	LLVMBasicBlockRef then_block = LLVMAppendBasicBlockInContext(
+		llvm_ctx, func, "ifthen"
+	);
+	LLVMBasicBlockRef after_block = LLVMAppendBasicBlockInContext(
+		llvm_ctx, func, "ifcont"
+	);
 
 	LLVMBuildCondBr(build, condition, then_block, after_block);
 
@@ -50,7 +55,11 @@ static void codegen_conditional_if_then(
 				continue;
 			}
 
-			LLVMValueRef phi = LLVMBuildPhi(build, LLVMInt32Type(), "ifphitmp");
+			LLVMValueRef phi = LLVMBuildPhi(
+				build,
+				LLVMInt32TypeInContext(llvm_ctx),
+				"ifphitmp"
+			);
 			LLVMAddIncoming(phi, &value_then, &then_block, 1);
 			LLVMAddIncoming(phi, &value_before, &before_block, 1);
 
@@ -70,11 +79,18 @@ static void codegen_conditional_if_then_else(
 	struct strmap *func_map,
 	LLVMValueRef condition
 ) {
+	LLVMContextRef llvm_ctx = LLVMGetBuilderContext(build);
 	LLVMValueRef func = LLVMGetBasicBlockParent(LLVMGetInsertBlock(build));
 
-	LLVMBasicBlockRef then_block = LLVMAppendBasicBlock(func, "ifthen");
-	LLVMBasicBlockRef else_block = LLVMAppendBasicBlock(func, "ifelse");
-	LLVMBasicBlockRef merge_block = LLVMAppendBasicBlock(func, "ifcont");
+	LLVMBasicBlockRef then_block = LLVMAppendBasicBlockInContext(
+		llvm_ctx, func, "ifthen"
+	);
+	LLVMBasicBlockRef else_block = LLVMAppendBasicBlockInContext(
+		llvm_ctx, func, "ifelse"
+	);
+	LLVMBasicBlockRef merge_block = LLVMAppendBasicBlockInContext(
+		llvm_ctx, func, "ifcont"
+	);
 
 	LLVMBuildCondBr(build, condition, then_block, else_block);
 
@@ -112,7 +128,11 @@ static void codegen_conditional_if_then_else(
 				continue;
 			}
 
-			LLVMValueRef phi = LLVMBuildPhi(build, LLVMInt32Type(), "ifelsephitmp");
+			LLVMValueRef phi = LLVMBuildPhi(
+				build,
+				LLVMInt32TypeInContext(llvm_ctx),
+				"ifelsephitmp"
+			);
 			LLVMAddIncoming(phi, &value_then, &then_block, 1);
 			LLVMAddIncoming(phi, &value_else, &else_block, 1);
 
@@ -133,9 +153,12 @@ void codegen_conditional(
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {
+	LLVMContextRef llvm_ctx = LLVMGetBuilderContext(build);
 	LLVMValueRef func = LLVMGetBasicBlockParent(LLVMGetInsertBlock(build));
 
-	LLVMBasicBlockRef cond_block = LLVMAppendBasicBlock(func, "ifcond");
+	LLVMBasicBlockRef cond_block = LLVMAppendBasicBlockInContext(
+		llvm_ctx, func, "ifcond"
+	);
 	LLVMBuildBr(build, cond_block);
 	LLVMPositionBuilderAtEnd(build, cond_block);
 
@@ -150,7 +173,7 @@ void codegen_conditional(
 	}
 	condition = LLVMBuildICmp(
 		build, LLVMIntNE, condition,
-		LLVMConstInt(LLVMInt32Type(), 0, 0),
+		LLVMConstInt(LLVMInt32TypeInContext(llvm_ctx), 0, 0),
 		"ifcmptmp"
 	);
 

@@ -23,26 +23,32 @@ LLVMModuleRef codegen_get_current_module(void) {
 }
 
 bool codegen(const char *name, const struct ast_node *root) {
-    module = LLVMModuleCreateWithName(name);
+	LLVMContextRef llvm_ctx = LLVMContextCreate();
+
+    module = LLVMModuleCreateWithNameInContext(name, llvm_ctx);
 
     LLVMTypeRef param_types[] = { };
-    LLVMTypeRef ret_type = LLVMFunctionType(LLVMInt32Type(), param_types, 0, 0);
+    LLVMTypeRef ret_type = LLVMFunctionType(
+		LLVMInt32TypeInContext(llvm_ctx), param_types, 0, 0
+	);
     LLVMValueRef main_func = LLVMAddFunction(module, "main", ret_type);
 
-    LLVMBasicBlockRef entry = LLVMAppendBasicBlock(main_func, "entry");
+    LLVMBasicBlockRef entry = LLVMAppendBasicBlockInContext(
+		llvm_ctx, main_func, "entry"
+	);
 
-    LLVMBuilderRef builder = LLVMCreateBuilder();
+    LLVMBuilderRef builder = LLVMCreateBuilderInContext(llvm_ctx);
     LLVMPositionBuilderAtEnd(builder, entry);
 
 	// codegen_test(module, builder);
 
 	struct strmap var_map = strmap_new(), func_map = strmap_new();
-	codegen_func_init(&func_map);
+	codegen_func_init(llvm_ctx, &func_map);
 	codegen_stmt_list(builder, &root->value.children.l[0], &var_map, &func_map);
 
-	// char *error = NULL;
-	// LLVMVerifyModule(module, LLVMAbortProcessAction, &error);
-	// LLVMDisposeMessage(error);
+	char *error = NULL;
+	LLVMVerifyModule(module, LLVMAbortProcessAction, &error);
+	LLVMDisposeMessage(error);
 
 	size_t len = strlen(name);
 	len += 4; // ".bc" and a null terminator
@@ -59,6 +65,8 @@ bool codegen(const char *name, const struct ast_node *root) {
 	strmap_free(&func_map);
 
     LLVMDisposeBuilder(builder);
+    LLVMDisposeModule(module);
+    LLVMContextDispose(llvm_ctx);
 
 	return true;
 }

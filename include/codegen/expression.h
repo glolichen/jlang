@@ -6,7 +6,11 @@
 #include "ast.h"
 #include "lex.h"
 
-LLVMValueRef codegen_number(const struct lex_token *token);
+LLVMValueRef codegen_number(
+	LLVMContextRef llvm_ctx,
+	const struct lex_token *token
+);
+
 LLVMValueRef codegen_factor(
 	LLVMBuilderRef build,
 	const struct ast_node *node,

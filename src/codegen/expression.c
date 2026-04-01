@@ -11,8 +11,14 @@
 #include "ast.h"
 #include "lex.h"
 
-LLVMValueRef codegen_number(const struct lex_token *token) {
-	return LLVMConstInt(LLVMInt32Type(), token->literal.number, 0);
+LLVMValueRef codegen_number(
+	LLVMContextRef llvm_ctx,
+	const struct lex_token *token
+) {
+	return LLVMConstInt(
+		LLVMInt32TypeInContext(llvm_ctx),
+		token->literal.number, 0
+	);
 }
 
 LLVMValueRef codegen_factor(
@@ -27,8 +33,12 @@ LLVMValueRef codegen_factor(
 		return codegen_expression(build, child, var_map, func_map);
 
 	if (child->type == AST_LEAF) {
-		if (child->value.token.type == LEX_NUMBER)
-			return codegen_number(&child->value.token);
+		if (child->value.token.type == LEX_NUMBER) {
+			return codegen_number(
+				LLVMGetBuilderContext(build),
+				&child->value.token
+			);
+		}
 
 		if (child->value.token.type == LEX_IDENTIFIER) {
 			LLVMValueRef *value = strmap_get(var_map, child->value.token.str);
@@ -116,8 +126,16 @@ LLVMValueRef codegen_expr_no_comp(
 	}
 
 	LLVMValueRef lhs = codegen_term(build, &list->l[i], var_map, func_map);
-	if (first_is_negative)
-		lhs = LLVMBuildMul(build, lhs, LLVMConstInt(LLVMInt32Type(), -1, 0), "negtmp");
+	if (first_is_negative) {
+		lhs = LLVMBuildMul(
+			build, lhs,
+			LLVMConstInt(
+				LLVMInt32TypeInContext(LLVMGetBuilderContext(build)),
+				-1, 0
+			),
+			"negtmp"
+		);
+	}
 
 	for (i = i + 1; i < list->size - 1; i += 2) {
 		if (list->l[i].type != AST_LEAF) {
@@ -189,7 +207,11 @@ LLVMValueRef codegen_expression(
 		}
 
 		LLVMValueRef bool_value = LLVMBuildICmp(build, comp_pred, lhs, rhs, "cmptmp");
-		return LLVMBuildIntCast2(build, bool_value, LLVMInt32Type(), false, "cmptmp2");
+		return LLVMBuildIntCast2(
+			build, bool_value,
+			LLVMInt32TypeInContext(LLVMGetBuilderContext(build)),
+			false, "cmptmp2"
+		);
 	}
 
 	fprintf(stderr, "ERROR! (11)");

@@ -90,7 +90,8 @@ void codegen_break(
 
 	struct break_statement *cur_break = malloc(sizeof(struct break_statement));
 	cur_break->var_map = strmap_copy(var_map);
-	cur_break->block = LLVMAppendBasicBlock(
+	cur_break->block = LLVMAppendBasicBlockInContext(
+		LLVMGetBuilderContext(build),
 		LLVMGetBasicBlockParent(LLVMGetInsertBlock(build)),
 		"breakblock"
 	);
@@ -109,6 +110,8 @@ void codegen_for_loop(
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {
+	LLVMContextRef llvm_ctx = LLVMGetBuilderContext(build);
+
 	// for nested loops, restore previous context
 	struct for_loop_context before_ctx = context;
 
@@ -133,9 +136,15 @@ void codegen_for_loop(
 
 	// create references to block before for loop, for loop body, and after loop
 	LLVMBasicBlockRef before_block = LLVMGetInsertBlock(build);
-	LLVMBasicBlockRef body_block = LLVMAppendBasicBlock(func, "forbody");
-	LLVMBasicBlockRef cond_block = LLVMAppendBasicBlock(func, "forcond");
-	LLVMBasicBlockRef after_phi_block = LLVMAppendBasicBlock(func, "forafterphi");
+	LLVMBasicBlockRef body_block = LLVMAppendBasicBlockInContext(
+		llvm_ctx, func, "forbody"
+	);
+	LLVMBasicBlockRef cond_block = LLVMAppendBasicBlockInContext(
+		llvm_ctx, func, "forcond"
+	);
+	LLVMBasicBlockRef after_phi_block = LLVMAppendBasicBlockInContext(
+		llvm_ctx, func, "forafterphi"
+	);
 
 	context.break_statements = ll_new();
 	context.body_block = body_block;
@@ -146,7 +155,7 @@ void codegen_for_loop(
 	// if the for loop condition is left blank, always true
 	LLVMValueRef end_condition;
 	if (node->value.children.l[1].value.children.size == 0)
-		end_condition = LLVMConstInt(LLVMInt1Type(), 1, 0);
+		end_condition = LLVMConstInt(LLVMInt1TypeInContext(llvm_ctx), 1, 0);
 	else {
 		end_condition = codegen_expression(
 			build,
@@ -159,7 +168,7 @@ void codegen_for_loop(
 		}
 		end_condition = LLVMBuildICmp(
 			build, LLVMIntNE, end_condition,
-			LLVMConstInt(LLVMInt32Type(), 0, 0),
+			LLVMConstInt(LLVMInt32TypeInContext(llvm_ctx), 0, 0),
 			"forcmptmp"
 		);
 	}
@@ -179,7 +188,11 @@ void codegen_for_loop(
 		// linked list current node for var_map before loop (in "var_map" variable)
 		struct strmap_list_node *cur_before = var_map->list[i];
 		while (cur_before != NULL) {
-			LLVMValueRef phi = LLVMBuildPhi(build, LLVMInt32Type(), "forbodyphitmp");
+			LLVMValueRef phi = LLVMBuildPhi(
+				build,
+				LLVMInt32TypeInContext(llvm_ctx),
+				"forbodyphitmp"
+			);
 
 			// value before = value from before hte for loop
 			LLVMValueRef value_before = *(LLVMValueRef *) cur_before->value;
@@ -208,7 +221,7 @@ void codegen_for_loop(
 		codegen_assignment(build, &node->value.children.l[2], &var_map_loop, func_map);
 
 	if (node->value.children.l[1].value.children.size == 0)
-		end_condition = LLVMConstInt(LLVMInt1Type(), 1, 0);
+		end_condition = LLVMConstInt(LLVMInt1TypeInContext(llvm_ctx), 1, 0);
 	else {
 		end_condition = codegen_expression(
 			build,
@@ -221,7 +234,7 @@ void codegen_for_loop(
 		}
 		end_condition = LLVMBuildICmp(
 			build, LLVMIntNE, end_condition,
-			LLVMConstInt(LLVMInt32Type(), 0, 0),
+			LLVMConstInt(LLVMInt32TypeInContext(llvm_ctx), 0, 0),
 			"forcmptmp"
 		);
 	}
@@ -261,7 +274,11 @@ void codegen_for_loop(
 
 			// if loop did not iterate at all, predecessor is the before_block
 			// if it did, it is the loop_block_end
-			LLVMValueRef phi = LLVMBuildPhi(build, LLVMInt32Type(), "forafterphitmp");
+			LLVMValueRef phi = LLVMBuildPhi(
+				build,
+				LLVMInt32TypeInContext(llvm_ctx),
+				"forafterphitmp"
+			);
 			LLVMAddIncoming(phi, &value_before, &before_block, 1);
 			LLVMAddIncoming(phi, &value_loop, &loop_block_end, 1);
 
