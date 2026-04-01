@@ -291,7 +291,8 @@ void codegen_for_loop(
 		cur = cur->next;
 	}
 
-	strmap_remove(var_map, loop_assign_var, false);
+	if (loop_assign_var != NULL)
+		strmap_remove(var_map, loop_assign_var, false);
 
 	strmap_free(&var_map_loop);
 	strmap_free(&loop_phi_nodes);
@@ -300,3 +301,4 @@ void codegen_for_loop(
 
 	context = before_ctx;
 }
+
