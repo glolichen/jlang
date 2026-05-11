@@ -7,8 +7,7 @@
 
 void codegen_continue(
 	LLVMBuilderRef build,
-	struct strmap *var_map,
-	struct strmap *func_map
+	struct strmap *var_map
 );
 
 void codegen_break(
