@@ -15,10 +15,12 @@ ODIR = obj
 
 _OBJ = main.o lex.o ast.o parse.o \
        utils/strmap.o utils/linkedlist.o \
-       codegen/assignment.o codegen/conditional.o \
+       codegen/variable.o codegen/conditional.o \
        codegen/expression.o codegen/forloop.o \
        codegen/function.o codegen/return.o \
-       codegen/statement.o codegen/codegen.o
+       codegen/statement.o codegen/codegen.o \
+       codegen/types.o error.o
+
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))
 
 $(ODIR)/%.o: src/%.c

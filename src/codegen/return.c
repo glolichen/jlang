@@ -7,6 +7,7 @@
 #include "codegen/return.h"
 #include "codegen/expression.h"
 #include "utils/strmap.h"
+#include "error.h"
 #include "ast.h"
 
 void codegen_return(
@@ -15,17 +16,13 @@ void codegen_return(
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {
-	if (node->type != AST_RETURN) {
-		fprintf(stderr, "ERROR! (14)\n");
-		exit(1);
-	}
+	if (node->type != AST_RETURN)
+		ERROR_COMPILER();
 
 	const struct ast_node_list *list = &node->value.children;
 
-	if (list->size != 1 || list->l[0].type != AST_EXPR) {
-		fprintf(stderr, "ERROR! (15)\n");
-		exit(1);
-	}
+	if (list->size != 1 || list->l[0].type != AST_EXPR)
+		ERROR_COMPILER();
 
 	LLVMValueRef value = codegen_expression(build, &list->l[0], var_map, func_map);
 	LLVMBuildRet(build, value);

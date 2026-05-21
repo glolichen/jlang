@@ -25,6 +25,8 @@ static const char *ast_node_type_to_str(enum ast_node_type type) {
 			return "STMT";
 		case AST_STMT_LIST:
 			return "STMT_LIST";
+		case AST_VAR_DECLARATION:
+			return "VAR_DECLARATION";
 		case AST_ASSIGN:
 			return "ASSIGN";
 		case AST_FUNC_CALL:

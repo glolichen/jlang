@@ -7,12 +7,12 @@
 #include <string.h>
 
 #include "codegen/function.h"
-#include "codegen/expression.h"
 #include "codegen/return.h"
 #include "codegen/forloop.h"
-#include "codegen/assignment.h"
+#include "codegen/variable.h"
 #include "codegen/conditional.h"
 #include "utils/strmap.h"
+#include "error.h"
 #include "ast.h"
 
 // return whether to continue generating code
@@ -23,16 +23,17 @@ bool codegen_statement(
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {
-	if (node->type != AST_STMT) {
-		fprintf(stderr, "ERROR! (16)\n");
-		exit(1);
-	}
+	if (node->type != AST_STMT)
+		ERROR_COMPILER();
 
 	const struct ast_node *child = &node->value.children.l[0];
 	switch (child->type) {
 		case AST_ASSIGN:
 			codegen_assignment(build, child, var_map, func_map);
 			break;	
+		case AST_VAR_DECLARATION:
+			codegen_var_declaration(build, child, var_map, func_map);
+			break;
 		case AST_RETURN:
 			codegen_return(build, child, var_map, func_map);
 			break;
@@ -53,8 +54,7 @@ bool codegen_statement(
 			codegen_break(build, var_map);
 			return true;
 		default:
-			fprintf(stderr, "ERROR! (17)\n");
-			exit(1);
+			ERROR_COMPILER();
 	}
 
 	return false;
@@ -67,10 +67,8 @@ bool codegen_stmt_list(
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {
-	if (node->type != AST_STMT_LIST) {
-		fprintf(stderr, "ERROR! (18)\n");
-		exit(1);
-	}
+	if (node->type != AST_STMT_LIST)
+		ERROR_COMPILER();
 
 	const struct ast_node_list *list = &node->value.children;
 	for (size_t i = 0; i < list->size; i++) {

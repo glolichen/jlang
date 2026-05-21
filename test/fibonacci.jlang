@@ -1,24 +1,38 @@
 {
-	n = 0;
-	input = 48;
-	inputdigits = -1;
+	i32 n;
+	i32 input;
+	i32 inputdigits;
+	i32 i;
+	i32 answer;
+	i32 prev;
+	i32 prevprev;
+	i32 current;
+	i32 next;
+	i32 answerdigits;
+	i32 maxpower;
+	i32 power;
+	i32 digit;
 
-	for (i = 1000000000; input != 10; i = i / 10) {
-		n = n + i * (input - 48);
-		inputdigits = inputdigits + 1;
+	n = to_i32(0);
+	input = to_i32(48);
+	inputdigits = -to_i32(1);
+
+	for (i = to_i32(1000000000); input != to_i32(10); i = i / to_i32(10)) {
+		n = n + i * (input - to_i32(48));
+		inputdigits = inputdigits + to_i32(1);
 		input = getchar();
 	}
 
-	for (i = 0; i < 10 - inputdigits - 1; i = i + 1) {
-		n = n / 10;
+	for (i = to_i32(0); i < to_i32(10) - inputdigits - to_i32(1); i = i + to_i32(1)) {
+		n = n / to_i32(10);
 	}
 
-	answer = 1;
-	if (n > 2) {
-		prev = 1;
-		prevprev = 1;
-		current = 2;
-		for (i = 0; i < n - 3; i = i + 1) {
+	answer = to_i32(1);
+	if (n > to_i32(2)) {
+		prev = to_i32(1);
+		prevprev = to_i32(1);
+		current = to_i32(2);
+		for (i = to_i32(0); i < n - to_i32(3); i = i + to_i32(1)) {
 			next = prev + current;
 			prevprev = prev;
 			prev = current;
@@ -27,28 +41,28 @@
 		answer = current;
 	}
 	else {
-		if (n <= 0) {
-			answer = 0;
+		if (n <= to_i32(0)) {
+			answer = to_i32(0);
 		}
 	}
 
-	if (answer == 0) {
-		putchar(48);
+	if (answer == to_i32(0)) {
+		putchar(to_i32(48));
 	}
 	else {
-		answerdigits = 0;
-		maxpower = 1;
-		for (; maxpower <= answer; maxpower = maxpower * 10) { }
+		answerdigits = to_i32(0);
+		maxpower = to_i32(1);
+		for (; maxpower <= answer; maxpower = maxpower * to_i32(10)) { }
 
-		for (power = maxpower / 10; power >= 1; power = power / 10) {
+		for (power = maxpower / to_i32(10); power >= to_i32(1); power = power / to_i32(10)) {
 			digit = answer / power;
-			putchar(digit + 48);
+			putchar(digit + to_i32(48));
 			answer = answer % power;
 		}
 	}
 
-	putchar(10);
+	putchar(to_i32(10));
 
-	return 0;
+	return to_i32(0);
 }
 

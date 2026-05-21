@@ -12,6 +12,7 @@ Compiler for very minimal C-like language. Compiles to LLVM IR.
              |  <return> ";"
              |  <conditional>
              |  <for_loop>
+             |  <var_declaration> ";"
              |  ";"
 
 <return> ::= <expression>
@@ -37,6 +38,11 @@ Compiler for very minimal C-like language. Compiles to LLVM IR.
           |  number
           |  <func_call>
           |  "(" <expression> ")"
+
+<var_declaration> ::= <type> identifier
+
+<type> ::= "i8" | "i16" | "i32" | "i64"
+     // |  "u8" | "u16" | "u32" | "u64" (no unsigned integers for now)
 ```
 
 ## AST Structure
@@ -60,9 +66,8 @@ Didn't bother with inheritance (AST node is just a list of children).
 If a variable is assigned for the first time in a block (such as a conditional), it will be "forgotten" as soon as it exits scope. Future uses of that variable will result in an error.
 
 ## Known Bugs
- - Nested if broken
- - Cannot have `break` inside loop body itself (not inside an another scope within the loop) ("Invalid instruction with no BB")
  - Cannot return from before end of body
+ - Cannot have negative number literal (`function ... accepts only 1 ...`)
 
 ## LLVM
 

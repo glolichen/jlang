@@ -7,8 +7,10 @@
 #include <string.h>
 
 #include "codegen/function.h"
+#include "codegen/types.h"
 #include "codegen/codegen.h"
 #include "codegen/expression.h"
+#include "codegen/types.h"
 #include "utils/strmap.h"
 #include "ast.h"
 #include "lex.h"
@@ -70,6 +72,17 @@ LLVMValueRef codegen_func_call(
 	LLVMContextRef llvm_ctx = LLVMGetBuilderContext(build);
 
 	const char *func_name = node->value.children.l[0].value.token.str;
+
+	if (
+		strcmp(func_name, "to_i8") == 0 ||
+		strcmp(func_name, "to_i16") == 0 ||
+		strcmp(func_name, "to_i32") == 0 ||
+		strcmp(func_name, "to_i64") == 0
+	) {
+		return types_convert_literal(build, node);
+	}
+
+
 	struct function_info *func_info = strmap_get(func_map, func_name);
 
 	if (func_info == NULL) {

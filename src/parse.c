@@ -16,6 +16,12 @@ static const enum lex_token_type COMP_OPS[] = {
 };
 static const size_t COMP_OPS_SIZE = sizeof(COMP_OPS) / sizeof(COMP_OPS[0]);
 
+static const enum lex_token_type TYPES[] = {
+	LEX_I8, LEX_I16, LEX_I32, LEX_I64,
+	// LEX_U8, LEX_U16, LEX_U32, LEX_U64
+};
+static const size_t TYPES_SIZE = sizeof(TYPES) / sizeof(TYPES[0]);
+
 static const char **line_list;
 static struct lex_token_list token_list;
 static size_t current_index = 0;
@@ -205,7 +211,6 @@ static bool expression_list(struct ast_node *node) {
 	return false;
 }
 
-
 static bool assignment(struct ast_node *node) {
 	// 1 token lookahead, ensure after identifier is equal character
 	if (!is_type(LEX_IDENTIFIER))
@@ -223,6 +228,29 @@ static bool assignment(struct ast_node *node) {
 
 	size_t new_index = ast_insert_node(node, AST_EXPR);
 	expression(&node->value.children.l[new_index]);
+
+	return true;
+}
+
+static bool var_declaration(struct ast_node *node) {
+	if (!is_types(TYPES, TYPES_SIZE))
+		return false;
+	next();
+	if (!is_type(LEX_IDENTIFIER))
+		return false;
+
+	// move back
+	prev();
+
+	// insert type (such as i32)
+	ast_insert_leaf(node, get_cur());
+
+	next();
+
+	// insert identifier
+	ast_insert_leaf(node, get_cur());
+
+	next();
 
 	return true;
 }
@@ -285,6 +313,15 @@ static bool statement(struct ast_node *node) {
 
 	size_t new_index = ast_insert_node(node, AST_ASSIGN);
 	if (assignment(&node->value.children.l[new_index])) {
+		expect(LEX_SEMICOLON);
+		next();
+		return true;
+	}
+
+	set_token(start_index);
+	ast_remove_node(node, new_index);
+	new_index = ast_insert_node(node, AST_VAR_DECLARATION);
+	if (var_declaration(&node->value.children.l[new_index])) {
 		expect(LEX_SEMICOLON);
 		next();
 		return true;

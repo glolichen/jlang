@@ -8,18 +8,9 @@
 #include "codegen/expression.h"
 #include "codegen/function.h"
 #include "utils/strmap.h"
+#include "error.h"
 #include "ast.h"
 #include "lex.h"
-
-LLVMValueRef codegen_number(
-	LLVMContextRef llvm_ctx,
-	const struct lex_token *token
-) {
-	return LLVMConstInt(
-		LLVMInt32TypeInContext(llvm_ctx),
-		token->literal.number, 0
-	);
-}
 
 LLVMValueRef codegen_factor(
 	LLVMBuilderRef build,
@@ -34,10 +25,8 @@ LLVMValueRef codegen_factor(
 
 	if (child->type == AST_LEAF) {
 		if (child->value.token.type == LEX_NUMBER) {
-			return codegen_number(
-				LLVMGetBuilderContext(build),
-				&child->value.token
-			);
+			fprintf(stderr, "use to_ixx functions to convert number literals to integer types\n");
+			exit(1);
 		}
 
 		if (child->value.token.type == LEX_IDENTIFIER) {
@@ -52,8 +41,7 @@ LLVMValueRef codegen_factor(
 			return value;
 	}
 
-	fprintf(stderr, "ERROR! (1)\n");
-	exit(1);
+	ERROR_COMPILER();
 }
 
 LLVMValueRef codegen_term(
@@ -62,20 +50,16 @@ LLVMValueRef codegen_term(
 	const struct strmap *var_map,
 	struct strmap *func_map
 ) {
-	if (node->type != AST_TERM) {
-		fprintf(stderr, "ERROR! (2)\n");
-		exit(1);
-	}
+	if (node->type != AST_TERM)
+		ERROR_COMPILER();
 
 	const struct ast_node_list *list = &node->value.children;
 	LLVMValueRef lhs = codegen_factor(build, &list->l[0], var_map, func_map);
 
 	size_t i;
 	for (i = 1; i < list->size - 1; i += 2) {
-		if (list->l[i].type != AST_LEAF) {
-			fprintf(stderr, "ERROR! (3)");
-			exit(1);
-		}
+		if (list->l[i].type != AST_LEAF)
+			ERROR_COMPILER();
 
 		LLVMValueRef rhs = codegen_factor(build, &list->l[i + 1], var_map, func_map);
 
@@ -90,15 +74,12 @@ LLVMValueRef codegen_term(
 				lhs = LLVMBuildSRem(build, lhs, rhs, "modtmp");
 				break;
 			default:
-				fprintf(stderr, "ERROR! (4)");
-				exit(1);
+				ERROR_COMPILER();
 		}
 	}
 
-	if (i != list->size) {
-		fprintf(stderr, "ERROR! (5)");
-		exit(1);
-	}
+	if (i != list->size)
+		ERROR_COMPILER();
 
 	return lhs;
 }
@@ -109,10 +90,8 @@ LLVMValueRef codegen_expr_no_comp(
 	const struct strmap *var_map,
 	struct strmap *func_map
 ) {
-	if (node->type != AST_EXPR_NO_COMP) {
-		fprintf(stderr, "ERROR! (6)\n");
-		exit(1);
-	}
+	if (node->type != AST_EXPR_NO_COMP)
+		ERROR_COMPILER();
 
 	const struct ast_node_list *list = &node->value.children;
 
@@ -138,10 +117,8 @@ LLVMValueRef codegen_expr_no_comp(
 	}
 
 	for (i = i + 1; i < list->size - 1; i += 2) {
-		if (list->l[i].type != AST_LEAF) {
-			fprintf(stderr, "ERROR! (7)");
-			exit(1);
-		}
+		if (list->l[i].type != AST_LEAF)
+			ERROR_COMPILER();
 
 		LLVMValueRef rhs = codegen_term(build, &list->l[i + 1], var_map, func_map);
 
@@ -151,10 +128,8 @@ LLVMValueRef codegen_expr_no_comp(
 			lhs = LLVMBuildSub(build, lhs, rhs, "subtmp");
 	}
 
-	if (i != list->size) {
-		fprintf(stderr, "ERROR! (8)");
-		exit(1);
-	}
+	if (i != list->size)
+		ERROR_COMPILER();
 
 	return lhs;
 }
@@ -165,10 +140,8 @@ LLVMValueRef codegen_expression(
 	const struct strmap *var_map,
 	struct strmap *func_map
 ) {
-	if (node->type != AST_EXPR) {
-		fprintf(stderr, "ERROR! (9)\n");
-		exit(1);
-	}
+	if (node->type != AST_EXPR)
+		ERROR_COMPILER();
 
 	const struct ast_node_list *list = &node->value.children;
 
@@ -202,8 +175,7 @@ LLVMValueRef codegen_expression(
 				comp_pred = LLVMIntNE;
 				break;
 			default:
-				fprintf(stderr, "ERROR! (10)");
-				exit(1);
+				ERROR_COMPILER();
 		}
 
 		LLVMValueRef bool_value = LLVMBuildICmp(build, comp_pred, lhs, rhs, "cmptmp");
@@ -214,7 +186,6 @@ LLVMValueRef codegen_expression(
 		);
 	}
 
-	fprintf(stderr, "ERROR! (11)");
-	exit(1);
+	ERROR_COMPILER();
 }
 

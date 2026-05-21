@@ -7,11 +7,12 @@
 #include <string.h>
 
 #include "codegen/forloop.h"
-#include "codegen/assignment.h"
+#include "codegen/variable.h"
 #include "codegen/expression.h"
 #include "codegen/statement.h"
 #include "utils/linkedlist.h"
 #include "utils/strmap.h"
+#include "error.h"
 #include "ast.h"
 
 struct break_cont_stmt {
@@ -149,10 +150,10 @@ void codegen_for_loop(
 			&node->value.children.l[1],
 			&var_map_loop, func_map
 		);
-		if (end_condition == NULL) {
-			fprintf(stderr, "ERROR! (21)\n");
-			exit(1);
-		}
+
+		if (end_condition == NULL)
+			ERROR_COMPILER();
+
 		end_condition = LLVMBuildICmp(
 			build, LLVMIntNE, end_condition,
 			LLVMConstInt(LLVMInt32TypeInContext(llvm_ctx), 0, 0),
@@ -248,10 +249,10 @@ void codegen_for_loop(
 			&node->value.children.l[1],
 			&var_map_loop, func_map
 		);
-		if (end_condition == NULL) {
-			fprintf(stderr, "ERROR! (21)\n");
-			exit(1);
-		}
+
+		if (end_condition == NULL)
+			ERROR_COMPILER();
+
 		end_condition = LLVMBuildICmp(
 			build, LLVMIntNE, end_condition,
 			LLVMConstInt(LLVMInt32TypeInContext(llvm_ctx), 0, 0),

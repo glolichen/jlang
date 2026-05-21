@@ -1,9 +1,16 @@
-#ifndef CODEGEN_ASSIGNMENT_H
-#define CODEGEN_ASSIGNMENT_H
+#ifndef CODEGEN_VARIABLE_H
+#define CODEGEN_VARIABLE_H
 
 #include <llvm-c/Core.h>
 #include "utils/strmap.h"
 #include "ast.h"
+
+void codegen_var_declaration(
+	LLVMBuilderRef build,
+	const struct ast_node *node,
+	struct strmap *var_map,
+	struct strmap *func_map
+);
 
 void codegen_assignment(
 	LLVMBuilderRef build,

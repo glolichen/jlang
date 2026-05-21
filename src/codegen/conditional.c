@@ -2,14 +2,13 @@
 #include <llvm-c/Types.h>
 
 #include <inttypes.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #include "codegen/conditional.h"
 #include "codegen/statement.h"
 #include "codegen/expression.h"
 #include "utils/strmap.h"
+#include "error.h"
 #include "ast.h"
 
 static void codegen_conditional_if_then(
@@ -167,10 +166,10 @@ void codegen_conditional(
 		&node->value.children.l[0],
 		var_map, func_map
 	);
-	if (condition == NULL) {
-		fprintf(stderr, "ERROR! (19)\n");
-		exit(1);
-	}
+
+	if (condition == NULL)
+		ERROR_COMPILER();
+
 	condition = LLVMBuildICmp(
 		build, LLVMIntNE, condition,
 		LLVMConstInt(LLVMInt32TypeInContext(llvm_ctx), 0, 0),
@@ -183,9 +182,7 @@ void codegen_conditional(
 	// 3 = has else (if then else)
 	else if (node->value.children.size == 3)
 		codegen_conditional_if_then_else(build, node, var_map, func_map, condition);
-	else {
-		fprintf(stderr, "ERROR! (20)");
-		exit(1);
-	}
+	else
+		ERROR_COMPILER();
 }
 

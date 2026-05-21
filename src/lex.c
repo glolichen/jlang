@@ -115,10 +115,22 @@ const char *lex_token_type_to_str(enum lex_token_type type) {
 			return "CONTINUE";
 		case LEX_BREAK:
 			return "BREAK";
-		case LEX_INT:
-			return "INT";
-		case LEX_CHAR:
-			return "CHAR";
+		case LEX_I8:
+			return "I8";
+		case LEX_I16:
+			return "I16";
+		case LEX_I32:
+			return "I32";
+		case LEX_I64:
+			return "I64";
+		// case LEX_U8:
+		// 	return "U8";
+		// case LEX_U16:
+		// 	return "U16";
+		// case LEX_U32:
+		// 	return "U32";
+		// case LEX_U64:
+		// 	return "U64";
 		case LEX_NOTHING:
 			return "NOTHING";
 	}
@@ -144,10 +156,22 @@ static enum lex_token_type str_to_keyword(const char *str) {
 		return LEX_CONTINUE;
 	if (strcmp(str, "break") == 0)
 		return LEX_BREAK;
-	if (strcmp(str, "int") == 0)
-		return LEX_INT;
-	if (strcmp(str, "char") == 0)
-		return LEX_CHAR;
+	if (strcmp(str, "i8") == 0)
+		return LEX_I8;
+	if (strcmp(str, "i16") == 0)
+		return LEX_I16;
+	if (strcmp(str, "i32") == 0)
+		return LEX_I32;
+	if (strcmp(str, "i64") == 0)
+		return LEX_I64;
+	// if (strcmp(str, "u8") == 0)
+	// 	return LEX_U8;
+	// if (strcmp(str, "u16") == 0)
+	// 	return LEX_U16;
+	// if (strcmp(str, "u32") == 0)
+	// 	return LEX_U32;
+	// if (strcmp(str, "u64") == 0)
+	// 	return LEX_U64;
 	return -1;
 }
 
