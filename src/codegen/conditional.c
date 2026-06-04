@@ -7,6 +7,7 @@
 #include "codegen/conditional.h"
 #include "codegen/statement.h"
 #include "codegen/expression.h"
+#include "codegen/variable.h"
 #include "utils/strmap.h"
 #include "error.h"
 #include "ast.h"
@@ -46,7 +47,9 @@ static void codegen_conditional_if_then(
 		struct strmap_list_node *cur_before = var_map->list[i];
 		while (cur_before != NULL) {
 			LLVMValueRef value_before = *(LLVMValueRef *) cur_before->value;
-			LLVMValueRef value_then = *(LLVMValueRef *) strmap_get(&var_map_then, cur_before->str);
+			LLVMValueRef value_then = ((struct var_map_entry *) strmap_get(
+				&var_map_then, cur_before->str
+			))->value;
 
 			// if conditional does not affect value, no need for phi
 			if (value_before == value_then) {
@@ -62,7 +65,7 @@ static void codegen_conditional_if_then(
 			LLVMAddIncoming(phi, &value_then, &then_block, 1);
 			LLVMAddIncoming(phi, &value_before, &before_block, 1);
 
-			strmap_set(var_map, cur_before->str, &phi, sizeof(LLVMValueRef));
+			strmap_set(var_map, cur_before->str, &phi, sizeof(struct var_map_entry));
 
 			cur_before = cur_before->next;
 		}
@@ -118,8 +121,12 @@ static void codegen_conditional_if_then_else(
 		struct strmap_list_node *cur = var_map->list[i];
 		while (cur != NULL) {
 			LLVMValueRef value_cur = *(LLVMValueRef *) cur->value;
-			LLVMValueRef value_then = *(LLVMValueRef *) strmap_get(&var_map_then, cur->str);
-			LLVMValueRef value_else = *(LLVMValueRef *) strmap_get(&var_map_else, cur->str);
+			LLVMValueRef value_then = ((struct var_map_entry *) strmap_get(
+				&var_map_then, cur->str
+			))->value;
+			LLVMValueRef value_else = ((struct var_map_entry *) strmap_get(
+				&var_map_else, cur->str
+			))->value;
 
 			// if conditional does not affect value, no need for phi
 			if (value_cur == value_then && value_cur == value_else) {
@@ -135,7 +142,7 @@ static void codegen_conditional_if_then_else(
 			LLVMAddIncoming(phi, &value_then, &then_block, 1);
 			LLVMAddIncoming(phi, &value_else, &else_block, 1);
 
-			strmap_set(var_map, cur->str, &phi, sizeof(LLVMValueRef));
+			strmap_set(var_map, cur->str, &phi, sizeof(struct var_map_entry));
 
 			cur = cur->next;
 		}

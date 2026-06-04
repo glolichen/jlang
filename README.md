@@ -63,11 +63,12 @@ Didn't bother with inheritance (AST node is just a list of children).
 
 ## Implementation Notes
 
-If a variable is assigned for the first time in a block (such as a conditional), it will be "forgotten" as soon as it exits scope. Future uses of that variable will result in an error.
+ - Numerical literals are 64 bit by default, need to be casted explicitly
+ - Comparisons must be between two variables of the same type, returns an integer of that type
 
 ## Known Bugs
  - Cannot return from before end of body
- - Cannot have negative number literal (`function ... accepts only 1 ...`)
+ - Variable declared in for loop (`for (i = 0; ...)`) not removed after loop
 
 ## LLVM
 

@@ -1,15 +1,33 @@
 #include <llvm-c/Core.h>
+#include <llvm-c/Types.h>
 #include <string.h>
 #include <stdio.h>
 
-#include "codegen/types.h"
+#include "codegen/expression.h"
+#include "types.h"
 #include "error.h"
 #include "ast.h"
 #include "lex.h"
 
+const char *value_type_to_str(LLVMTypeRef type, LLVMBuilderRef build) {
+	if (type == TYPE_I8(build))
+		return "i8";
+	if (type == TYPE_I16(build))
+		return "i16";
+	if (type == TYPE_I32(build))
+		return "i32";
+	if (type == TYPE_I64(build))
+		return "i64";
+	if (type == NULL)
+		return "UNKNOWN";
+	ERROR_COMPILER();
+}
+
 LLVMValueRef types_convert_literal(
 	LLVMBuilderRef build,
-	const struct ast_node *node
+	struct ast_node *node,
+	const struct strmap *var_map,
+	struct strmap *func_map
 ) {
 	const char *func_name = node->value.children.l[0].value.token.str;
 
@@ -33,32 +51,13 @@ LLVMValueRef types_convert_literal(
 		goto wrong_params;
 
 	struct ast_node *expr = &ast_params->l[0];
-	if (expr->type != AST_EXPR)
+	if (expr->node_type != AST_EXPR)
 		goto wrong_params;
 
-	struct ast_node *expr_no_comp = &expr->value.children.l[0];
-	if (expr_no_comp->type != AST_EXPR_NO_COMP)
-		goto wrong_params;
+	node->value_type = llvm_type;
 
-	struct ast_node *term = &expr_no_comp->value.children.l[0];
-	if (term->type != AST_TERM)
-		goto wrong_params;
-
-	struct ast_node *factor = &term->value.children.l[0];
-	if (factor->type != AST_FACTOR)
-		goto wrong_params;
-
-	struct ast_node *leaf = &factor->value.children.l[0];
-	if (leaf->type != AST_LEAF)
-		goto wrong_params;
-
-	struct lex_token *token = &leaf->value.token;
-	if (token->type != LEX_NUMBER)
-		goto wrong_params;
-
-	int number = token->literal.number;
-
-	return LLVMConstInt(llvm_type, number, 0);
+	LLVMValueRef expr_value = codegen_expression(build, expr, var_map, func_map);
+	return LLVMBuildIntCast2(build, expr_value, llvm_type, true, "intcasttmp");
 
 wrong_params:
 	fprintf(

@@ -1,5 +1,11 @@
 {
 	i32 a;
 	a = to_i32(2);
+
+	i64 b;
+	b = (4);
+
+	a = to_i32(to_i64(a) + b);
+
 	return a;
 }

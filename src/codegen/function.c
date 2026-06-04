@@ -7,11 +7,10 @@
 #include <string.h>
 
 #include "codegen/function.h"
-#include "codegen/types.h"
 #include "codegen/codegen.h"
 #include "codegen/expression.h"
-#include "codegen/types.h"
 #include "utils/strmap.h"
+#include "types.h"
 #include "ast.h"
 #include "lex.h"
 
@@ -39,7 +38,7 @@ static void populate_builtin_funcs(
 		.is_defined = false
 	};
 	strmap_set(func_map, "getchar", &getchar_info, sizeof(getchar_info));
-
+	
 	LLVMTypeRef putchar_params[] = { LLVMInt32TypeInContext(llvm_ctx) };
 	struct function_info putchar_info = {
 		.func = NULL,
@@ -52,6 +51,7 @@ static void populate_builtin_funcs(
 		.is_builtin = true,
 		.is_defined = false
 	};
+
 	strmap_set(func_map, "putchar", &putchar_info, sizeof(putchar_info));
 }
 void codegen_func_init(
@@ -63,7 +63,7 @@ void codegen_func_init(
 
 LLVMValueRef codegen_func_call(
 	LLVMBuilderRef build,
-	const struct ast_node *node,
+	struct ast_node *node,
 	const struct strmap *var_map,
 	struct strmap *func_map
 ) {
@@ -79,7 +79,7 @@ LLVMValueRef codegen_func_call(
 		strcmp(func_name, "to_i32") == 0 ||
 		strcmp(func_name, "to_i64") == 0
 	) {
-		return types_convert_literal(build, node);
+		return types_convert_literal(build, node, var_map, func_map);
 	}
 
 
@@ -110,6 +110,7 @@ LLVMValueRef codegen_func_call(
 		exit(1);
 	}
 
+	// TODO: add "automation" for builtin functions
 	if (strcmp(func_name, "getchar") == 0) {
 		return LLVMBuildIntCast2(
 			build,
@@ -131,6 +132,8 @@ LLVMValueRef codegen_func_call(
 
 	LLVMValueRef out = LLVMBuildCall2(build, func_info->type, func_info->func, params, ast_param_num, "");
 	free(params);
+
+	node->value_type = LLVMGetReturnType(func_info->type);
 
 	return out;
 }

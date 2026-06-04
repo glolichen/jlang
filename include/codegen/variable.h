@@ -2,8 +2,14 @@
 #define CODEGEN_VARIABLE_H
 
 #include <llvm-c/Core.h>
+#include "types.h"
 #include "utils/strmap.h"
 #include "ast.h"
+
+struct var_map_entry {
+	LLVMValueRef value;
+	LLVMTypeRef type;
+};
 
 void codegen_var_declaration(
 	LLVMBuilderRef build,

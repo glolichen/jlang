@@ -4,9 +4,10 @@
 
 #include "ast.h"
 #include "lex.h"
+#include "types.h"
 
 static const char *ast_node_type_to_str(enum ast_node_type type) {
-	switch(type) {
+	switch (type) {
 		case AST_ROOT:
 			return "ROOT";
 		case AST_EXPR_NO_COMP:
@@ -48,14 +49,14 @@ static const char *ast_node_type_to_str(enum ast_node_type type) {
 struct ast_node ast_new_node(enum ast_node_type type) {
 	return (struct ast_node) {
 		.value.children = ast_new_node_list(),
-		.type = type,
+		.node_type = type,
 	};
 }
 
 // will free all lex_token's under the node/tree
 // those tokens will be set to NULL so that they are not freed again
 void ast_free_node(struct ast_node *node) {
-	if (node->type == AST_LEAF) 
+	if (node->node_type == AST_LEAF) 
 	{
 		// lex_free_token(&node->value.token);
 	}
@@ -94,36 +95,40 @@ void ast_free_node_list(struct ast_node_list *list) {
 
 // TODO: Safety -- if current node type is terminal, do not allow this
 // if adding node type is terminal, use insert_leaf instead
-size_t ast_insert_node(struct ast_node *node, enum ast_node_type type) {
-	if (node->type == AST_LEAF || type == AST_LEAF)
+size_t ast_insert_node(struct ast_node *node, enum ast_node_type type, size_t line) {
+	if (node->node_type == AST_LEAF || type == AST_LEAF)
 		return -1;
 
 	struct ast_node_list *list = &node->value.children;
 
 	struct ast_node new_node;
-	new_node.type = type;
+	new_node.node_type = type;
 	new_node.value.children = ast_new_node_list();
+	new_node.value_type = NULL;
+	new_node.line = line;
 	ast_node_list_append(list, new_node);
 
 	return list->size - 1;
 }
 
-size_t ast_insert_leaf(struct ast_node *node, const struct lex_token *token) {
-	if (node->type == AST_LEAF)
+size_t ast_insert_leaf(struct ast_node *node, const struct lex_token *token, size_t line) {
+	if (node->node_type == AST_LEAF)
 		return -1;
 
 	struct ast_node_list *list = &node->value.children;
 
 	struct ast_node new_node;
-	new_node.type = AST_LEAF;
+	new_node.node_type = AST_LEAF;
 	new_node.value.token = *token;
+	new_node.value_type = NULL;
+	new_node.line = line;
 	ast_node_list_append(list, new_node);
 
 	return list->size - 1;
 }
 
 bool ast_remove_node(struct ast_node *node, size_t index) {
-	if (node->type == AST_LEAF)
+	if (node->node_type == AST_LEAF)
 		return false;
 	if (index >= node->value.children.size)
 		return false;
@@ -197,7 +202,7 @@ struct ast_ll_node_data ast_queue_pop(struct ast_queue *queue) {
 }
 
 static void ast_print_in_order(const struct ast_node *node) {
-	if (node->type == AST_LEAF) {
+	if (node->node_type == AST_LEAF) {
 		lex_print_token(&node->value.token);
 		return;
 	}
@@ -218,8 +223,8 @@ void ast_print(const struct ast_node *root) {
 			current_level = cur.level;
 		}
 
-		if (cur.node->type == AST_LEAF) {
-			printf("%zu -> ID %zu, leaf: ", cur.parent_id, counter++);
+		if (cur.node->node_type == AST_LEAF) {
+			printf("%zu -> ID %zu, leaf: line %zu, ", cur.parent_id, counter++, cur.node->line);
 			lex_print_token(&cur.node->value.token);
 			continue;
 		}
@@ -229,9 +234,10 @@ void ast_print(const struct ast_node *root) {
 		else
 			printf("root ");
 		printf(
-			"ID %zu, nonterminal: %s, %zu children\n",
+			"ID %zu, nonterminal: line %zu, %s, %zu children\n",
 			counter,
-			ast_node_type_to_str(cur.node->type),
+			cur.node->line,
+			ast_node_type_to_str(cur.node->node_type),
 			cur.node->value.children.size
 		);
 

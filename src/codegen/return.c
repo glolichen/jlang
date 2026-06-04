@@ -16,12 +16,12 @@ void codegen_return(
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {
-	if (node->type != AST_RETURN)
+	if (node->node_type != AST_RETURN)
 		ERROR_COMPILER();
 
 	const struct ast_node_list *list = &node->value.children;
 
-	if (list->size != 1 || list->l[0].type != AST_EXPR)
+	if (list->size != 1 || list->l[0].node_type != AST_EXPR)
 		ERROR_COMPILER();
 
 	LLVMValueRef value = codegen_expression(build, &list->l[0], var_map, func_map);

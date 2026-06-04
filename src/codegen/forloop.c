@@ -191,8 +191,8 @@ void codegen_for_loop(
 
 			// save phi node
 			// need separate map because the value in var_map_loop will be modified
-			strmap_set(&loop_phi_nodes, cur_before->str, &phi, sizeof(LLVMValueRef));
-			strmap_set(&var_map_loop, cur_before->str, &phi, sizeof(LLVMValueRef));
+			strmap_set(&loop_phi_nodes, cur_before->str, &phi, sizeof(struct var_map_entry));
+			strmap_set(&var_map_loop, cur_before->str, &phi, sizeof(struct var_map_entry));
 
 			cur_before = cur_before->next;
 		}
@@ -211,7 +211,9 @@ void codegen_for_loop(
 	for (uint64_t i = 0; i < var_map_loop.bucket_count; i++) {
 		struct strmap_list_node *cur_main_loop = var_map_loop.list[i];
 		while (cur_main_loop != NULL) {
-			LLVMValueRef value_main = *(LLVMValueRef *) strmap_get(&var_map_loop, cur_main_loop->str);
+			LLVMValueRef value_main = ((struct var_map_entry *) strmap_get(
+				&var_map_loop, cur_main_loop->str
+			))->value;
 
 			LLVMValueRef phi = LLVMBuildPhi(
 				build,
@@ -224,15 +226,15 @@ void codegen_for_loop(
 			while (cur != NULL) {
 				struct break_cont_stmt *cur_continue = cur->data;
 
-				LLVMValueRef value_at_continue = *(LLVMValueRef *) strmap_get(
+				LLVMValueRef value_at_continue = ((struct var_map_entry *) strmap_get(
 					&cur_continue->var_map, cur_main_loop->str
-				);
+				))->value;
 				LLVMAddIncoming(phi, &value_at_continue, &cur_continue->block, 1);
 
 				cur = cur->next;
 			}
 
-			strmap_set(&var_map_loop, cur_main_loop->str, &phi, sizeof(LLVMValueRef));
+			strmap_set(&var_map_loop, cur_main_loop->str, &phi, sizeof(struct var_map_entry));
 
 			cur_main_loop = cur_main_loop->next;
 		}
@@ -274,7 +276,9 @@ void codegen_for_loop(
 		struct strmap_list_node *cur_phi = loop_phi_nodes.list[i];
 		while (cur_phi != NULL) {
 			LLVMValueRef phi = *(LLVMValueRef *) cur_phi->value;
-			LLVMValueRef value_loop = *(LLVMValueRef *) strmap_get(&var_map_loop, cur_phi->str);
+			LLVMValueRef value_loop = ((struct var_map_entry *) strmap_get(
+				&var_map_loop, cur_phi->str
+			))->value;
 			LLVMAddIncoming(phi, &value_loop, &loop_block_end, 1);
 			cur_phi = cur_phi->next;
 		}
@@ -286,7 +290,9 @@ void codegen_for_loop(
 		struct strmap_list_node *cur_before_loop = var_map->list[i];
 		while (cur_before_loop != NULL) {
 			LLVMValueRef value_before = *(LLVMValueRef *) cur_before_loop->value;
-			LLVMValueRef value_loop = *(LLVMValueRef *) strmap_get(&var_map_loop, cur_before_loop->str);
+			LLVMValueRef value_loop = ((struct var_map_entry *) strmap_get(
+				&var_map_loop, cur_before_loop->str
+			))->value;
 
 			if (value_before == value_loop) {
 				cur_before_loop = cur_before_loop->next;
@@ -307,15 +313,15 @@ void codegen_for_loop(
 			while (cur != NULL) {
 				struct break_cont_stmt *cur_break = cur->data;
 
-				LLVMValueRef value_at_break = *(LLVMValueRef *) strmap_get(
+				LLVMValueRef value_at_break = ((struct var_map_entry *) strmap_get(
 					&cur_break->var_map, cur_before_loop->str
-				);
+				))->value;
 				LLVMAddIncoming(phi, &value_at_break, &cur_break->block, 1);
 
 				cur = cur->next;
 			}
 
-			strmap_set(var_map, cur_before_loop->str, &phi, sizeof(LLVMValueRef));
+			strmap_set(var_map, cur_before_loop->str, &phi, sizeof(struct var_map_entry));
 
 			cur_before_loop = cur_before_loop->next;
 		}

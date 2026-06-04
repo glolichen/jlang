@@ -12,7 +12,7 @@ void codegen_func_init(
 
 LLVMValueRef codegen_func_call(
 	LLVMBuilderRef build,
-	const struct ast_node *node,
+	struct ast_node *node,
 	const struct strmap *var_map,
 	struct strmap *func_map
 );

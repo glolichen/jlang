@@ -19,15 +19,15 @@
 // (after continue/break/return, stop generating so LLVM doesn't complain)
 bool codegen_statement(
 	LLVMBuilderRef build,
-	const struct ast_node *node,
+	struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {
-	if (node->type != AST_STMT)
+	if (node->node_type != AST_STMT)
 		ERROR_COMPILER();
 
-	const struct ast_node *child = &node->value.children.l[0];
-	switch (child->type) {
+	struct ast_node *child = &node->value.children.l[0];
+	switch (child->node_type) {
 		case AST_ASSIGN:
 			codegen_assignment(build, child, var_map, func_map);
 			break;	
@@ -63,14 +63,14 @@ bool codegen_statement(
 // returns true if there is a terminator (continue/break/return) in this list
 bool codegen_stmt_list(
 	LLVMBuilderRef build,
-	const struct ast_node *node,
+	struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {
-	if (node->type != AST_STMT_LIST)
+	if (node->node_type != AST_STMT_LIST)
 		ERROR_COMPILER();
 
-	const struct ast_node_list *list = &node->value.children;
+	struct ast_node_list *list = &node->value.children;
 	for (size_t i = 0; i < list->size; i++) {
 		// if any is terminated, stop generating
 		if (codegen_statement(build, &list->l[i], var_map, func_map))
