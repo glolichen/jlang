@@ -67,10 +67,6 @@ LLVMValueRef codegen_func_call(
 	const struct strmap *var_map,
 	struct strmap *func_map
 ) {
-	(void) var_map;
-
-	LLVMContextRef llvm_ctx = LLVMGetBuilderContext(build);
-
 	const char *func_name = node->value.children.l[0].value.token.str;
 
 	if (
@@ -108,17 +104,6 @@ LLVMValueRef codegen_func_call(
 	if (ast_param_num != LLVMCountParamTypes(func_info->type)) {
 		fprintf(stderr, "invalid number of parameters\n");
 		exit(1);
-	}
-
-	// TODO: add "automation" for builtin functions
-	if (strcmp(func_name, "getchar") == 0) {
-		return LLVMBuildIntCast2(
-			build,
-			LLVMBuildCall2(build, func_info->type, func_info->func, NULL, 0, "getchartmp"),
-			LLVMInt32TypeInContext(llvm_ctx),
-			true,
-			"getcharcasttmp"
-		);
 	}
 
 	LLVMValueRef *params;

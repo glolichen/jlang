@@ -20,7 +20,7 @@
 	for (i = to_i32(1000000000); input != to_i32(10); i = i / to_i32(10)) {
 		n = n + i * (input - to_i32(48));
 		inputdigits = inputdigits + to_i32(1);
-		input = getchar();
+		input = to_i32(getchar());
 	}
 
 	for (i = to_i32(0); i < to_i32(10) - inputdigits - to_i32(1); i = i + to_i32(1)) {

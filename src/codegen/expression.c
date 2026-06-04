@@ -247,6 +247,7 @@ LLVMValueRef codegen_expression(
 	}
 
 	LLVMValueRef bool_value = LLVMBuildICmp(build, comp_pred, lhs, rhs, "cmptmp");
+	node->value_type = type;
 	return LLVMBuildIntCast2(build, bool_value, type, false, "cmptmp2");
 }
 

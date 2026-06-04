@@ -18,6 +18,8 @@ void codegen_var_declaration(
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {
+	(void) func_map;
+
 	if (node->node_type != AST_VAR_DECLARATION)
 		ERROR_COMPILER();
 

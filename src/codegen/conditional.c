@@ -46,26 +46,23 @@ static void codegen_conditional_if_then(
 	for (uint64_t i = 0; i < var_map->bucket_count; i++) {
 		struct strmap_list_node *cur_before = var_map->list[i];
 		while (cur_before != NULL) {
-			LLVMValueRef value_before = *(LLVMValueRef *) cur_before->value;
-			LLVMValueRef value_then = ((struct var_map_entry *) strmap_get(
-				&var_map_then, cur_before->str
-			))->value;
+			struct var_map_entry *entry_before = cur_before->value;
+			struct var_map_entry *entry_then = strmap_get(&var_map_then, cur_before->str);
 
 			// if conditional does not affect value, no need for phi
-			if (value_before == value_then) {
+			if (entry_before->value == entry_then->value) {
 				cur_before = cur_before->next;
 				continue;
 			}
 
-			LLVMValueRef phi = LLVMBuildPhi(
-				build,
-				LLVMInt32TypeInContext(llvm_ctx),
-				"ifphitmp"
-			);
-			LLVMAddIncoming(phi, &value_then, &then_block, 1);
-			LLVMAddIncoming(phi, &value_before, &before_block, 1);
+			LLVMValueRef phi = LLVMBuildPhi(build, entry_before->type, "ifphitmp");
 
-			strmap_set(var_map, cur_before->str, &phi, sizeof(struct var_map_entry));
+			LLVMAddIncoming(phi, &entry_then->value, &then_block, 1);
+			LLVMAddIncoming(phi, &entry_before->value, &before_block, 1);
+
+			strmap_set(var_map, cur_before->str, & (struct var_map_entry) {
+				.value = phi, .type = entry_before->type
+			}, sizeof(struct var_map_entry));
 
 			cur_before = cur_before->next;
 		}
@@ -120,29 +117,27 @@ static void codegen_conditional_if_then_else(
 	for (uint64_t i = 0; i < var_map->bucket_count; i++) {
 		struct strmap_list_node *cur = var_map->list[i];
 		while (cur != NULL) {
-			LLVMValueRef value_cur = *(LLVMValueRef *) cur->value;
-			LLVMValueRef value_then = ((struct var_map_entry *) strmap_get(
-				&var_map_then, cur->str
-			))->value;
-			LLVMValueRef value_else = ((struct var_map_entry *) strmap_get(
-				&var_map_else, cur->str
-			))->value;
+			struct var_map_entry *entry_cur = cur->value;
+			struct var_map_entry *entry_then = strmap_get(&var_map_then, cur->str);
+			struct var_map_entry *entry_else = strmap_get(&var_map_else, cur->str);
 
 			// if conditional does not affect value, no need for phi
-			if (value_cur == value_then && value_cur == value_else) {
+			if (
+				entry_cur->value == entry_then->value &&
+				entry_cur->value == entry_else->value
+			) {
 				cur = cur->next;
 				continue;
 			}
 
-			LLVMValueRef phi = LLVMBuildPhi(
-				build,
-				LLVMInt32TypeInContext(llvm_ctx),
-				"ifelsephitmp"
-			);
-			LLVMAddIncoming(phi, &value_then, &then_block, 1);
-			LLVMAddIncoming(phi, &value_else, &else_block, 1);
+			LLVMValueRef phi = LLVMBuildPhi(build, entry_cur->type, "ifelsephitmp");
 
-			strmap_set(var_map, cur->str, &phi, sizeof(struct var_map_entry));
+			LLVMAddIncoming(phi, &entry_then->value, &then_block, 1);
+			LLVMAddIncoming(phi, &entry_else->value, &else_block, 1);
+
+			strmap_set(var_map, cur->str, & (struct var_map_entry) {
+				.value = phi, .type = entry_cur->type
+			}, sizeof(struct var_map_entry));
 
 			cur = cur->next;
 		}

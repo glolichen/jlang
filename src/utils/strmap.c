@@ -159,8 +159,8 @@ void *strmap_get(const struct strmap *map_ptr, const char *str) {
 }
 
 // this WILL COPY the value, need to specify the size of the value
-// does NOT copy the key (string)
 // the "value" pointer can be freed/exit scope
+// does NOT copy the key (string)
 void strmap_set(struct strmap *map_ptr, const char *str, void *value, size_t value_size) {
 	strmap_set_internal(map_ptr, str, value, value_size, true);
 }
