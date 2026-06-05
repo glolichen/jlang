@@ -123,6 +123,8 @@ const char *lex_token_type_to_str(enum lex_token_type type) {
 			return "I32";
 		case LEX_I64:
 			return "I64";
+		case LEX_VOID:
+			return "VOID";
 		// case LEX_U8:
 		// 	return "U8";
 		// case LEX_U16:
@@ -164,6 +166,8 @@ static enum lex_token_type str_to_keyword(const char *str) {
 		return LEX_I32;
 	if (strcmp(str, "i64") == 0)
 		return LEX_I64;
+	if (strcmp(str, "void") == 0)
+		return LEX_VOID;
 	// if (strcmp(str, "u8") == 0)
 	// 	return LEX_U8;
 	// if (strcmp(str, "u16") == 0)

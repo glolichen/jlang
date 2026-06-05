@@ -48,10 +48,10 @@ bool codegen_statement(
 			break;
 		// loops have custom handling for continue/break, do not use this function
 		case AST_CONTINUE:
-			codegen_continue(build, var_map);
+			codegen_continue(build, child, var_map);
 			return true;
 		case AST_BREAK:
-			codegen_break(build, var_map);
+			codegen_break(build, child, var_map);
 			return true;
 		default:
 			ERROR_COMPILER();

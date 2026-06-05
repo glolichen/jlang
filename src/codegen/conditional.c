@@ -14,7 +14,7 @@
 
 static void codegen_conditional_if_then(
 	LLVMBuilderRef build,
-	const struct ast_node *node,
+	struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map,
 	LLVMValueRef condition
@@ -73,7 +73,7 @@ static void codegen_conditional_if_then(
 
 static void codegen_conditional_if_then_else(
 	LLVMBuilderRef build,
-	const struct ast_node *node,
+	struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map,
 	LLVMValueRef condition
@@ -150,7 +150,7 @@ static void codegen_conditional_if_then_else(
 // will modify var_map using phi nodes
 void codegen_conditional(
 	LLVMBuilderRef build,
-	const struct ast_node *node,
+	struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {
@@ -174,7 +174,7 @@ void codegen_conditional(
 
 	condition = LLVMBuildICmp(
 		build, LLVMIntNE, condition,
-		LLVMConstInt(LLVMInt32TypeInContext(llvm_ctx), 0, 0),
+		LLVMConstInt(node->value.children.l[0].value_type, 0, 0),
 		"ifcmptmp"
 	);
 

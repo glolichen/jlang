@@ -147,10 +147,7 @@ LLVMValueRef codegen_expr_no_comp(
 	if (first_is_negative) {
 		lhs = LLVMBuildMul(
 			build, lhs,
-			LLVMConstInt(
-				LLVMInt32TypeInContext(LLVMGetBuilderContext(build)),
-				-1, 0
-			),
+			LLVMConstInt(list->l[i].value_type, -1, 0),
 			"negtmp"
 		);
 	}

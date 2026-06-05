@@ -17,5 +17,13 @@ LLVMValueRef codegen_func_call(
 	struct strmap *func_map
 );
 
+void codegen_func_definition(
+	LLVMModuleRef module,
+	LLVMBuilderRef build,
+	struct ast_node *node,
+	const struct strmap *var_map,
+	struct strmap *func_map
+);
+
 #endif
 

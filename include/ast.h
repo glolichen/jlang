@@ -23,7 +23,11 @@ enum ast_node_type {
 	AST_FOR,
 	AST_RETURN,
 	AST_CONTINUE,
-	AST_BREAK
+	AST_BREAK,
+	AST_FUNC_PARAM_LIST,
+	AST_FUNC_DEFINITION,
+	AST_GLOBAL_DECL_DEF,
+	AST_MASTER_LIST
 };
 struct ast_node_list {
 	struct ast_node *l;

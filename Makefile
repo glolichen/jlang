@@ -18,7 +18,8 @@ _OBJ = main.o lex.o ast.o parse.o \
        codegen/variable.o codegen/conditional.o \
        codegen/expression.o codegen/forloop.o \
        codegen/function.o codegen/return.o \
-       codegen/statement.o codegen/codegen.o \
+       codegen/statement.o codegen/decl_def.o \
+       codegen/master.o codegen/codegen.o \
        types.o error.o
 
 OBJ = $(patsubst %,$(ODIR)/%,$(_OBJ))

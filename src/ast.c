@@ -42,6 +42,14 @@ static const char *ast_node_type_to_str(enum ast_node_type type) {
 			return "CONTINUE";
 		case AST_BREAK:
 			return "BREAK";
+		case AST_FUNC_PARAM_LIST:
+			return "FUNC_PARAM_LIST";
+		case AST_FUNC_DEFINITION:
+			return "FUNC_DEFINITION";
+		case AST_GLOBAL_DECL_DEF:
+			return "GLOBAL_DECL_DEF";
+		case AST_MASTER_LIST:
+			return "MASTER_LIST";
 	}
 	return "";
 }
@@ -50,6 +58,8 @@ struct ast_node ast_new_node(enum ast_node_type type) {
 	return (struct ast_node) {
 		.value.children = ast_new_node_list(),
 		.node_type = type,
+		.value_type = NULL,
+		.line = 0
 	};
 }
 

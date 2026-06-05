@@ -75,7 +75,6 @@ static bool is_types(const enum lex_token_type *type, size_t amount) {
 }
 
 
-// same as accept but will error on failure
 // static bool expects(const enum lex_token_type *type, size_t amount) {
 // 	enum lex_token_type cur_type = token_list.l[current_index].type;
 // 	for (size_t i = 0; i < amount; i++) {
@@ -372,7 +371,6 @@ static bool statement(struct ast_node *node) {
 }
 
 static bool statement_list(struct ast_node *node) {
-	// TODO: consider empty statements ({})
 	if (!is_type(LEX_LEFT_BRACE))
 		return false;
 
@@ -461,14 +459,112 @@ static bool for_loop(struct ast_node *node) {
 	return true;
 }
 
+static bool func_param_list(struct ast_node *node) {
+	if (!is_type(LEX_LEFT_PAREN))
+		return false;
+
+	next();
+	if (is_type(LEX_RIGHT_PAREN)) {
+		next();
+		return true;
+	}
+
+	while (true) {
+		if (!is_types(TYPES, TYPES_SIZE))
+			break;
+
+		ast_insert_leaf(node, get_cur(), get_cur_line());
+		next();
+
+		if (!is_type(LEX_IDENTIFIER))
+			break;
+
+		ast_insert_leaf(node, get_cur(), get_cur_line());
+		next();
+
+		if (is_type(LEX_RIGHT_PAREN)) {
+			next();
+			return true;
+		}
+
+		if (!expect(LEX_COMMA))
+			break;
+		next();
+	}
+
+	return false;
+}
+
+static bool func_definition(struct ast_node *node) {
+	if (!is_types(TYPES, TYPES_SIZE) && !is_type(LEX_VOID))
+		return false;
+
+	ast_insert_leaf(node, get_cur(), get_cur_line());
+	next();
+
+	if (!is_type(LEX_IDENTIFIER))
+		return false;
+
+	ast_insert_leaf(node, get_cur(), get_cur_line());
+	next();
+
+	size_t new_index = ast_insert_node(node, AST_FUNC_PARAM_LIST, get_cur_line());
+	if (!func_param_list(&node->value.children.l[new_index]))
+		return false;
+
+	new_index = ast_insert_node(node, AST_STMT_LIST, get_cur_line());
+	if (!statement_list(&node->value.children.l[new_index]))
+		return false;
+
+	return true;
+}
+
+static bool global_decl_def(struct ast_node *node) {
+	size_t start_index = current_index;
+
+	size_t new_index = ast_insert_node(node, AST_FUNC_DEFINITION, get_cur_line());
+	if (func_definition(&node->value.children.l[new_index]))
+		return true;
+
+	set_token(start_index);
+	ast_remove_node(node, new_index);
+
+	// TODO: continue with the other possible file-level declarations/definitions
+	// new_index = ast_insert_node(node, AST_VAR_DECLARATION, get_cur_line());
+	// if (var_declaration(&node->value.children.l[new_index])) {
+	// 	expect(LEX_SEMICOLON);
+	// 	next();
+	// 	return true;
+	// }
+
+	// fprintf(stderr, "[ERROR] invalid file-level declaration/definition\n");
+	// fprintf(stderr, "line %zu: ", get_cur()->line);
+	// print_cur_no_prefix(stderr);
+	// longjmp(error_buf, 1);
+
+	return false;
+}
+
+static bool master_list(struct ast_node *node) {
+	size_t new_index;
+	do {
+		new_index = ast_insert_node(node, AST_GLOBAL_DECL_DEF, get_cur_line());
+	} while (global_decl_def(&node->value.children.l[new_index]));
+	ast_remove_node(node, new_index);
+
+	return true;
+}
+
 static void goal(struct ast_node *node) {
-	// size_t new_index = ast_insert_node(node, AST_EXPR);
-	// expression(&node->value.children.l[new_index]);
+	size_t new_index = ast_insert_node(node, AST_MASTER_LIST, get_cur_line());
+	bool ok = master_list(&node->value.children.l[new_index]);
 
-	size_t new_index = ast_insert_node(node, AST_STMT_LIST, get_cur_line());
-	bool ok = statement_list(&node->value.children.l[new_index]);
-
-	printf("success? %u\n", ok);
+	if (!ok || token_list.size != current_index) {
+		fprintf(stderr, "[ERROR] syntax error\n");
+		fprintf(stderr, "line %zu: ", get_cur()->line);
+		print_cur_no_prefix(stderr);
+		longjmp(error_buf, 1);
+	}
 }
 
 bool parse(const struct lex_token_list *tokens, const char **lines, struct ast_node *root) {

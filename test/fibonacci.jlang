@@ -1,6 +1,9 @@
-{
+i32 main() {
 	i32 n;
 	i32 input;
+
+	continue;
+
 	i32 inputdigits;
 	i32 i;
 	i32 answer;

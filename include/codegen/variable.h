@@ -13,14 +13,14 @@ struct var_map_entry {
 
 void codegen_var_declaration(
 	LLVMBuilderRef build,
-	const struct ast_node *node,
+	struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map
 );
 
 void codegen_assignment(
 	LLVMBuilderRef build,
-	const struct ast_node *node,
+	struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map
 );

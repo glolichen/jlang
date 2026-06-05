@@ -14,7 +14,7 @@
 
 void codegen_var_declaration(
 	LLVMBuilderRef build,
-	const struct ast_node *node,
+	struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {
@@ -23,7 +23,7 @@ void codegen_var_declaration(
 	if (node->node_type != AST_VAR_DECLARATION)
 		ERROR_COMPILER();
 
-	const struct ast_node_list *list = &node->value.children;
+	struct ast_node_list *list = &node->value.children;
 
 	if (
 		list->size != 2 ||
@@ -33,28 +33,10 @@ void codegen_var_declaration(
 		ERROR_COMPILER();
 	}
 
-	LLVMContextRef llvm_ctx = LLVMGetBuilderContext(build);
-
 	const enum lex_token_type lex_type = list->l[0].value.token.type;
 	const struct lex_token *ident = &list->l[1].value.token;
 
-	LLVMTypeRef llvm_type;
-	switch (lex_type) {
-		case LEX_I8:
-			llvm_type = LLVMIntTypeInContext(llvm_ctx, 8);
-			break;
-		case LEX_I16:
-			llvm_type = LLVMInt16TypeInContext(llvm_ctx);
-			break;
-		case LEX_I32:
-			llvm_type = LLVMInt32TypeInContext(llvm_ctx);
-			break;
-		case LEX_I64:
-			llvm_type = LLVMInt64TypeInContext(llvm_ctx);
-			break;
-		default:
-			ERROR_COMPILER();
-	}
+	LLVMTypeRef llvm_type = type_from_lex(build, lex_type, false);
 
 	struct var_map_entry rhs = {
 		.value = LLVMConstInt(llvm_type, 0, 0),
@@ -66,14 +48,14 @@ void codegen_var_declaration(
 
 void codegen_assignment(
 	LLVMBuilderRef build,
-	const struct ast_node *node,
+	struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {
 	if (node->node_type != AST_ASSIGN)
 		ERROR_COMPILER();
 
-	const struct ast_node_list *list = &node->value.children;
+	struct ast_node_list *list = &node->value.children;
 
 	if (list->size != 2 || list->l[0].node_type != AST_LEAF)
 		ERROR_COMPILER();

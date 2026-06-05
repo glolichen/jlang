@@ -12,14 +12,14 @@
 
 void codegen_return(
 	LLVMBuilderRef build,
-	const struct ast_node *node,
+	struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {
 	if (node->node_type != AST_RETURN)
 		ERROR_COMPILER();
 
-	const struct ast_node_list *list = &node->value.children;
+	struct ast_node_list *list = &node->value.children;
 
 	if (list->size != 1 || list->l[0].node_type != AST_EXPR)
 		ERROR_COMPILER();

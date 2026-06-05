@@ -23,6 +23,24 @@ const char *value_type_to_str(LLVMTypeRef type, LLVMBuilderRef build) {
 	ERROR_COMPILER();
 }
 
+LLVMTypeRef type_from_lex(
+	LLVMBuilderRef build,
+	enum lex_token_type token,
+	bool include_void
+) {
+	if (token == LEX_I8)
+		return TYPE_I8(build);
+	if (token == LEX_I16)
+		return TYPE_I16(build);
+	if (token == LEX_I32)
+		return TYPE_I32(build);
+	if (token == LEX_I64)
+		return TYPE_I64(build);
+	if (token == LEX_VOID && include_void)
+		return TYPE_VOID(build);
+	ERROR_COMPILER();
+}
+
 LLVMValueRef types_convert_literal(
 	LLVMBuilderRef build,
 	struct ast_node *node,
@@ -31,17 +49,15 @@ LLVMValueRef types_convert_literal(
 ) {
 	const char *func_name = node->value.children.l[0].value.token.str;
 
-	LLVMContextRef llvm_ctx = LLVMGetBuilderContext(build);
-
-	LLVMTypeRef llvm_type;
+	LLVMTypeRef type;
 	if (strcmp(func_name, "to_i8") == 0)
-		llvm_type = LLVMIntTypeInContext(llvm_ctx, 8);
+		type = TYPE_I8(build);
 	else if (strcmp(func_name, "to_i16") == 0)
-		llvm_type = LLVMIntTypeInContext(llvm_ctx, 16);
+		type = TYPE_I16(build);
 	else if (strcmp(func_name, "to_i32") == 0)
-		llvm_type = LLVMIntTypeInContext(llvm_ctx, 32);
+		type = TYPE_I32(build);
 	else if (strcmp(func_name, "to_i64") == 0)
-		llvm_type = LLVMIntTypeInContext(llvm_ctx, 64);
+		type = TYPE_I64(build);
 	else
 		ERROR_COMPILER();
 
@@ -54,16 +70,16 @@ LLVMValueRef types_convert_literal(
 	if (expr->node_type != AST_EXPR)
 		goto wrong_params;
 
-	node->value_type = llvm_type;
+	node->value_type = type;
 
 	LLVMValueRef expr_value = codegen_expression(build, expr, var_map, func_map);
-	return LLVMBuildIntCast2(build, expr_value, llvm_type, true, "intcasttmp");
+	return LLVMBuildIntCast2(build, expr_value, type, true, "intcasttmp");
 
 wrong_params:
 	fprintf(
 		stderr,
-		"function %s accepts 1 number literal parameter\n",
-		func_name
+		"line %zu: function %s accepts 1 number literal parameter\n",
+		node->line, func_name
 	);
 	exit(1);
 }

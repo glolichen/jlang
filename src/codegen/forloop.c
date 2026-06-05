@@ -36,11 +36,12 @@ struct for_loop_context context;
 
 void codegen_continue(
 	LLVMBuilderRef build,
+	struct ast_node *node,
 	struct strmap *var_map
 ) {
 	// if body block is null then the context = {0} => called outside loop
 	if (context.body_block == NULL) {
-		fprintf(stderr, "ERROR! continue/break outside loop\n");
+		fprintf(stderr, "line %zu: continue outside loop\n", node->line);
 		exit(1);
 	}
 
@@ -62,11 +63,12 @@ void codegen_continue(
 
 void codegen_break(
 	LLVMBuilderRef build,
+	struct ast_node *node,
 	const struct strmap *var_map
 ) {
 	// if body block is null then the context = {0} => called outside loop
 	if (context.body_block == NULL) {
-		fprintf(stderr, "ERROR! continue/break outside loop\n");
+		fprintf(stderr, "line %zu: break outside loop\n", node->line);
 		exit(1);
 	}
 
@@ -88,7 +90,7 @@ void codegen_break(
 
 void codegen_for_loop(
 	LLVMBuilderRef build,
-	const struct ast_node *node,
+	struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map
 ) {

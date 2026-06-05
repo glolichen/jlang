@@ -28,6 +28,8 @@ enum lex_token_type {
 	LEX_I8, LEX_I16, LEX_I32, LEX_I64,
 	// LEX_U8, LEX_U16, LEX_U32, LEX_U64,
 
+	LEX_VOID,
+
 	LEX_NOTHING,
 };
 

@@ -7,17 +7,19 @@
 
 void codegen_continue(
 	LLVMBuilderRef build,
+	struct ast_node *node,
 	struct strmap *var_map
 );
 
 void codegen_break(
 	LLVMBuilderRef build,
+	struct ast_node *node,
 	const struct strmap *var_map
 );
 
 void codegen_for_loop(
 	LLVMBuilderRef build,
-	const struct ast_node *node,
+	struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map
 );

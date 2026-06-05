@@ -1,5 +1,6 @@
 {
-	a = getchar();
-	return a % 100;
+	i32 a;
+	a = to_i32(getchar());
+	return a + to_i32(5);
 }
 

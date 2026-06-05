@@ -7,7 +7,7 @@
 
 void codegen_conditional(
 	LLVMBuilderRef build,
-	const struct ast_node *node,
+	struct ast_node *node,
 	struct strmap *var_map,
 	struct strmap *func_map
 );

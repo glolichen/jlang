@@ -43,6 +43,16 @@ Compiler for very minimal C-like language. Compiles to LLVM IR.
 
 <type> ::= "i8" | "i16" | "i32" | "i64"
      // |  "u8" | "u16" | "u32" | "u64" (no unsigned integers for now)
+
+<func_param_list> ::= "(" { <type> identifier "," } <type> identifier ")"
+                   |  "()"
+
+<func_definition> ::= (<type> | "void") identifier <func_param_list> <statement_list>
+
+<global_decl_def> ::= <func_declaration>
+                // |  <global_variable>
+
+<master_list> ::= { <global_decl_def }
 ```
 
 ## AST Structure
@@ -60,6 +70,9 @@ Didn't bother with inheritance (AST node is just a list of children).
  - `CONDITIONAL`: `EXPRESSION`, `STMT_LIST`, (IF NO ELSE, NO MORE, IF THERE IS ELSE: `EXPRESSION`).
  - `FOR`: `ASSIGNMENT` (initial), `CONDITIONAL` (termination condition), `ASSIGNMENT` (every cycle), `STMT_LIST` ALWAYS HAS 4 CHILDREN, CHILDREN HAVE NO CHILDREN IF LEFT EMPTY.
  - `CONTINUE`/`BREAK`: no children
+ - `VAR_DECLARATION`: type, identifier
+ - `FUNC_PARAM_LIST`: type, identifier, type, identifier, etc
+ - `FUNC_DEFINITION`: (type OR "void"), identifier, `FUNC_PARAM_LIST`, `STMT_LIST`
 
 ## Implementation Notes
 
@@ -69,6 +82,7 @@ Didn't bother with inheritance (AST node is just a list of children).
 ## Known Bugs
  - Cannot return from before end of body
  - Variable declared in for loop (`for (i = 0; ...)`) not removed after loop
+ - No type checking for return
 
 ## LLVM
 
