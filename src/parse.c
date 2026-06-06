@@ -27,16 +27,31 @@ static struct lex_token_list token_list;
 static size_t current_index = 0;
 
 // move onto the next lexeme
-static void next() {
+static void next(void) {
 	current_index++;
 }
-static void prev() {
+#define NEXT(var) if (var = next())
+
+static void prev(void) {
 	current_index--;
 }
 static void set_token(int index) {
 	current_index = index;
 }
+
+// if current_index goes out of range, return a dummy
+// so any comparisons with is_type will always be false
+
+const struct lex_token DUMMY_TOKEN = {
+	.type = -1,
+	.line = -1,
+	.str = "",
+	.literal = {0}
+};
+
 static const struct lex_token *get_cur(void) {
+	if (current_index >= token_list.size)
+		return &DUMMY_TOKEN;
 	return &token_list.l[current_index];
 }
 static size_t get_cur_line(void) {

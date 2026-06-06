@@ -1,20 +1,12 @@
-i32 thing(i32 a, i32 b, i32 c) {
-	i32 d;
-	for (d = to_i32(0); d <= a; d = d + to_i32(1)) {
-		
-	}
-	if (a >= b) {
-		d = d + a - b;
+i64 func(i64 a) {
+	if (a == 0) {
+		return 0;
 	}
 	else {
-		d = d + a + b;
+		return 1;
 	}
-	return d * c;
 }
 
-i32 main() {
-	i64 a;
-	a = -to_i64(9);
-	return thing(-to_i32(a), to_i32(3), to_i32(4));
+i64 main() {
+	return func(2);
 }
-

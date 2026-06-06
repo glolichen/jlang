@@ -130,5 +130,5 @@ int main(int argc, const char *argv[]) {
 	free(line_lens);
 
 	return ok ? 0 : 1;
-};
+}
 

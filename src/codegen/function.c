@@ -175,12 +175,11 @@ void codegen_func_definition(
 		return_type, param_types, num_params, 0
 	);
 
-	LLVMValueRef func = LLVMAddFunction(module, func_name, func_type);
+	LLVMValueRef func_ref = LLVMAddFunction(module, func_name, func_type);
 
 	LLVMContextRef llvm_ctx = LLVMGetBuilderContext(build);
-
 	LLVMBasicBlockRef entry_block = LLVMAppendBasicBlockInContext(
-		llvm_ctx, func, "entry"
+		llvm_ctx, func_ref, "entry"
 	);
 	LLVMPositionBuilderAtEnd(build, entry_block);
 	
@@ -188,11 +187,11 @@ void codegen_func_definition(
 		const char *param_name = node_params.l[i * 2 + 1].value.token.str;
 
 		// name the parameter for fun
-		LLVMSetValueName2(LLVMGetParam(func, i), param_name, strlen(param_name));
+		LLVMSetValueName2(LLVMGetParam(func_ref, i), param_name, strlen(param_name));
 
 		// add the parameter to the strmap
 		strmap_set(&var_map_copy, param_name, & (struct var_map_entry) {
-			.value = LLVMGetParam(func, i),
+			.value = LLVMGetParam(func_ref, i),
 			.type = param_types[i]
 		}, sizeof(struct var_map_entry));
 	}
@@ -200,7 +199,7 @@ void codegen_func_definition(
 	codegen_stmt_list(build, &children.l[3], &var_map_copy, func_map);
 
 	struct function_info func_info = {
-		.func = func,
+		.func = func_ref,
 		.type = func_type,
 		.is_builtin = false
 	};
@@ -209,5 +208,23 @@ void codegen_func_definition(
 
 	strmap_free(&var_map_copy);
 	free(param_types);
+}
+
+void codegen_return(
+	LLVMBuilderRef build,
+	struct ast_node *node,
+	struct strmap *var_map,
+	struct strmap *func_map
+) {
+	if (node->node_type != AST_RETURN)
+		ERROR_COMPILER();
+
+	struct ast_node_list *list = &node->value.children;
+
+	if (list->size != 1 || list->l[0].node_type != AST_EXPR)
+		ERROR_COMPILER();
+
+	LLVMValueRef value = codegen_expression(build, &list->l[0], var_map, func_map);
+	LLVMBuildRet(build, value);
 }
 

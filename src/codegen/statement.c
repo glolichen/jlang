@@ -7,7 +7,6 @@
 #include <string.h>
 
 #include "codegen/function.h"
-#include "codegen/return.h"
 #include "codegen/forloop.h"
 #include "codegen/variable.h"
 #include "codegen/conditional.h"
@@ -16,6 +15,7 @@
 #include "ast.h"
 
 // return whether to continue generating code
+// avoid generating a temrinator in the middle of a basic block
 // (after continue/break/return, stop generating so LLVM doesn't complain)
 bool codegen_statement(
 	LLVMBuilderRef build,
@@ -30,23 +30,22 @@ bool codegen_statement(
 	switch (child->node_type) {
 		case AST_ASSIGN:
 			codegen_assignment(build, child, var_map, func_map);
-			break;	
+			return false;
 		case AST_VAR_DECLARATION:
 			codegen_var_declaration(build, child, var_map, func_map);
-			break;
+			return false;
 		case AST_RETURN:
 			codegen_return(build, child, var_map, func_map);
-			break;
+			return true;
 		case AST_FUNC_CALL:
 			codegen_func_call(build, child, var_map, func_map);
-			break;
+			return false;
 		case AST_CONDITIONAL:
 			codegen_conditional(build, child, var_map, func_map);
-			break;
+			return false;
 		case AST_FOR:
 			codegen_for_loop(build, child, var_map, func_map);
-			break;
-		// loops have custom handling for continue/break, do not use this function
+			return false;
 		case AST_CONTINUE:
 			codegen_continue(build, child, var_map);
 			return true;
@@ -73,8 +72,10 @@ bool codegen_stmt_list(
 	struct ast_node_list *list = &node->value.children;
 	for (size_t i = 0; i < list->size; i++) {
 		// if any is terminated, stop generating
-		if (codegen_statement(build, &list->l[i], var_map, func_map))
+		if (codegen_statement(build, &list->l[i], var_map, func_map)) {
+			// TODO: If i != size - 1, then error
 			return true;
+		}
 	}
 
 	return false;

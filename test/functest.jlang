@@ -1,0 +1,24 @@
+i32 func(i32 a) {
+	i32 b;
+	if (a > to_i32(0)) {
+		if (a == to_i32(4)) {
+			putchar(to_i32(48));
+			b = to_i32(0);
+		}
+		else {
+			putchar(to_i32(49));
+			b = to_i32(1);
+		}
+	}
+	else {
+		putchar(to_i32(50));
+		b = to_i32(2);
+	}
+
+	return b;
+}
+
+
+i32 main() {
+	return func(to_i32(4));
+}

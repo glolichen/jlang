@@ -25,5 +25,11 @@ void codegen_func_definition(
 	struct strmap *func_map
 );
 
+void codegen_return(
+	LLVMBuilderRef build,
+	struct ast_node *node,
+	struct strmap *var_map,
+	struct strmap *func_map
+);
 #endif
 

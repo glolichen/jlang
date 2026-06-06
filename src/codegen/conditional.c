@@ -34,14 +34,17 @@ static void codegen_conditional_if_then(
 
 	LLVMPositionBuilderAtEnd(build, then_block);
 	struct strmap var_map_then = strmap_copy(var_map);
-	bool terminated = codegen_stmt_list(build, &node->value.children.l[1], &var_map_then, func_map);
+	bool terminated = codegen_stmt_list(
+		build, &node->value.children.l[1], &var_map_then, func_map
+	);
 	if (!terminated)
 		LLVMBuildBr(build, after_block);
+
 	then_block = LLVMGetInsertBlock(build);
 
 	LLVMPositionBuilderAtEnd(build, after_block);
 
-	// iterate through ALREADY DEFINED variables and assign with phi nodesconditio
+	// iterate through ALREADY DEFINED variables and assign with phi nodes
 	// but only do this if they have been modified by either block
 	for (uint64_t i = 0; i < var_map->bucket_count; i++) {
 		struct strmap_list_node *cur_before = var_map->list[i];
@@ -57,7 +60,8 @@ static void codegen_conditional_if_then(
 
 			LLVMValueRef phi = LLVMBuildPhi(build, entry_before->type, "ifphitmp");
 
-			LLVMAddIncoming(phi, &entry_then->value, &then_block, 1);
+			if (!terminated)
+				LLVMAddIncoming(phi, &entry_then->value, &then_block, 1);
 			LLVMAddIncoming(phi, &entry_before->value, &before_block, 1);
 
 			strmap_set(var_map, cur_before->str, & (struct var_map_entry) {
@@ -96,17 +100,23 @@ static void codegen_conditional_if_then_else(
 	// generate then block and add merge block to terminate it
 	LLVMPositionBuilderAtEnd(build, then_block);
 	struct strmap var_map_then = strmap_copy(var_map);
-	codegen_stmt_list(build, &node->value.children.l[1], &var_map_then, func_map);
+	bool then_terminated = codegen_stmt_list(
+		build, &node->value.children.l[1], &var_map_then, func_map
+	);
+	if (!then_terminated)
+		LLVMBuildBr(build, merge_block);
 
-	LLVMBuildBr(build, merge_block);
 	then_block = LLVMGetInsertBlock(build);
 
 	// generate else block and add merge block to terminate it
 	LLVMPositionBuilderAtEnd(build, else_block);
 	struct strmap var_map_else = strmap_copy(var_map);
-	codegen_stmt_list(build, &node->value.children.l[2], &var_map_else, func_map);
+	bool else_terminated = codegen_stmt_list(
+		build, &node->value.children.l[2], &var_map_else, func_map
+	);
+	if (!else_terminated)
+		LLVMBuildBr(build, merge_block);
 
-	LLVMBuildBr(build, merge_block);
 	else_block = LLVMGetInsertBlock(build);
 
 	// deal with merge blocks and add phi nodes
@@ -132,8 +142,10 @@ static void codegen_conditional_if_then_else(
 
 			LLVMValueRef phi = LLVMBuildPhi(build, entry_cur->type, "ifelsephitmp");
 
-			LLVMAddIncoming(phi, &entry_then->value, &then_block, 1);
-			LLVMAddIncoming(phi, &entry_else->value, &else_block, 1);
+			if (!then_terminated)
+				LLVMAddIncoming(phi, &entry_then->value, &then_block, 1);
+			if (!else_terminated)
+				LLVMAddIncoming(phi, &entry_else->value, &else_block, 1);
 
 			strmap_set(var_map, cur->str, & (struct var_map_entry) {
 				.value = phi, .type = entry_cur->type

@@ -234,8 +234,7 @@ static enum lex_token_type str_to_delim(const char *str) {
 }
 
 
-// WARN: remember to update these
-// static const size_t max_keyword_len = 6;
+// WARN: remember to update this
 static const size_t max_delim_len = 2;
 
 struct lex_token_list lex_new_token_list(void) {

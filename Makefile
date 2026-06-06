@@ -2,7 +2,7 @@
 
 CC = clang
 
-CFLAGS = -I. -Wall -Wextra -g --debug -I$(IDIR) \
+CFLAGS = -I. -Wall -Wextra -pedantic -g --debug -I$(IDIR) \
          `llvm-config --cflags` \
          -fsanitize=address,undefined -static-libasan \
 
@@ -17,7 +17,7 @@ _OBJ = main.o lex.o ast.o parse.o \
        utils/strmap.o utils/linkedlist.o \
        codegen/variable.o codegen/conditional.o \
        codegen/expression.o codegen/forloop.o \
-       codegen/function.o codegen/return.o \
+       codegen/function.o \
        codegen/statement.o codegen/decl_def.o \
        codegen/master.o codegen/codegen.o \
        types.o error.o

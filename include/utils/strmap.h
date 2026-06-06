@@ -19,7 +19,7 @@ struct strmap {
 	uint64_t occupied_buckets, bucket_count;
 };
 
-struct strmap strmap_new();
+struct strmap strmap_new(void);
 struct strmap strmap_copy(const struct strmap *old_map_ptr);
 void strmap_set(struct strmap *map_ptr, const char *str, void *value, size_t value_size);
 void *strmap_get(const struct strmap *map_ptr, const char *str);

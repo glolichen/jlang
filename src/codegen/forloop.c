@@ -137,6 +137,7 @@ void codegen_for_loop(
 	);
 
 	context.break_statements = ll_new();
+	context.continue_statements = ll_new();
 	context.body_block = body_block;
 	context.cond_block = cond_block;
 	context.after_phi_block = after_phi_block;

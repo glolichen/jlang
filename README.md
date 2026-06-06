@@ -80,9 +80,20 @@ Didn't bother with inheritance (AST node is just a list of children).
  - Comparisons must be between two variables of the same type, returns an integer of that type
 
 ## Known Bugs
- - Cannot return from before end of body
  - Variable declared in for loop (`for (i = 0; ...)`) not removed after loop
  - No type checking for return
+ - Fix return for void functions
+ - Fix this (no terminator)
+```
+i64 func(i64 a) {
+	if (a == 0) {
+		return 0;
+	}
+	else {
+		return 1;
+	}
+}
+```
 
 ## LLVM
 

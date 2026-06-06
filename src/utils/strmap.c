@@ -21,7 +21,7 @@ static uint64_t djb2_hash(const unsigned char *str) {
 	return hash;
 }
 
-struct strmap strmap_new() {
+struct strmap strmap_new(void) {
 	struct strmap map = {
 		.list = calloc(STRMAP_STARTING_BUCKETS, sizeof(struct strmap_list_node *)),
 		.bucket_count = STRMAP_STARTING_BUCKETS,
