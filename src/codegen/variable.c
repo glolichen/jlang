@@ -67,7 +67,7 @@ void codegen_assignment(
 	if (entry == NULL) {
 		fprintf(
 			stderr,
-			"line %zu: variable %s is not declared",
+			"[ERROR] line %zu: variable %s is not declared",
 			node->line,
 			ident->str
 		);
@@ -76,7 +76,7 @@ void codegen_assignment(
 	if (entry->type != list->l[1].value_type) {
 		fprintf(
 			stderr,
-			"line %zu: type mismatch: expected %s, got %s\n",
+			"[ERROR] line %zu: type mismatch: expected %s, got %s\n",
 			node->line,
 			value_type_to_str(entry->type, build),
 			value_type_to_str(list->l[1].value_type, build)

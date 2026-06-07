@@ -91,7 +91,7 @@ LLVMValueRef codegen_term(
 		if (list->l[i + 1].value_type != type) {
 			fprintf(
 				stderr,
-				"line %zu: type mismatch: expected %s, got %s\n",
+				"[ERROR] line %zu: type mismatch: expected %s, got %s\n",
 				node->line,
 				value_type_to_str(type, build),
 				value_type_to_str(list->l[i + 1].value_type, build)
@@ -160,7 +160,7 @@ LLVMValueRef codegen_expr_no_comp(
 		if (list->l[i + 1].value_type != type) {
 			fprintf(
 				stderr,
-				"line %zu: type mismatch: expected %s, got %s\n",
+				"[ERROR] line %zu: type mismatch: expected %s, got %s\n",
 				node->line,
 				value_type_to_str(type, build),
 				value_type_to_str(list->l[i + 1].value_type, build)
@@ -209,7 +209,7 @@ LLVMValueRef codegen_expression(
 	if (list->l[0].value_type != list->l[2].value_type) {
 		fprintf(
 			stderr,
-			"line %zu: type mismatch: expected %s, got %s\n",
+			"[ERROR] line %zu: type mismatch: expected %s, got %s\n",
 			node->line,
 			value_type_to_str(list->l[0].value_type, build),
 			value_type_to_str(list->l[2].value_type, build)

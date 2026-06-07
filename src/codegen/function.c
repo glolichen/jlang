@@ -79,7 +79,11 @@ LLVMValueRef codegen_func_call(
 	struct function_info *func_info = strmap_get(func_map, func_name);
 
 	if (func_info == NULL) {
-		fprintf(stderr, "line %zu: function %s not defined!\n", node->line, func_name);
+		fprintf(
+			stderr,
+			"[ERROR] line %zu: function %s not defined!\n",
+			node->line, func_name
+		);
 		exit(1);
 	}
 
@@ -101,7 +105,7 @@ LLVMValueRef codegen_func_call(
 	if (ast_num_params != num_params) {
 		fprintf(
 			stderr,
-			"line %zu: invalid number of parameters: expected %zu, got %zu\n",
+			"[ERROR] line %zu: invalid number of parameters: expected %zu, got %zu\n",
 			node->line, num_params, ast_num_params
 		);
 		exit(1);
@@ -123,7 +127,7 @@ LLVMValueRef codegen_func_call(
 			if (got_type != param_types[i]) {
 				fprintf(
 					stderr,
-					"line %zu: type mismatch: expected %s, got %s\n",
+					"[ERROR] line %zu: type mismatch: expected %s, got %s\n",
 					node->line,
 					value_type_to_str(param_types[i], build),
 					value_type_to_str(got_type, build)
@@ -143,6 +147,9 @@ LLVMValueRef codegen_func_call(
 	return out;
 }
 
+LLVMTypeRef func_return_type = NULL;
+LLVMValueRef func_ref = NULL;
+
 void codegen_func_definition(
 	LLVMModuleRef module,
 	LLVMBuilderRef build,
@@ -156,7 +163,7 @@ void codegen_func_definition(
 
 	struct strmap var_map_copy = strmap_copy(var_map);
 
-	LLVMTypeRef return_type = type_from_lex(
+	func_return_type = type_from_lex(
 		build, children.l[0].value.token.type, true
 	);
 
@@ -172,10 +179,10 @@ void codegen_func_definition(
 	}
 
 	LLVMTypeRef func_type = LLVMFunctionType(
-		return_type, param_types, num_params, 0
+		func_return_type, param_types, num_params, 0
 	);
 
-	LLVMValueRef func_ref = LLVMAddFunction(module, func_name, func_type);
+	func_ref = LLVMAddFunction(module, func_name, func_type);
 
 	LLVMContextRef llvm_ctx = LLVMGetBuilderContext(build);
 	LLVMBasicBlockRef entry_block = LLVMAppendBasicBlockInContext(
@@ -196,7 +203,10 @@ void codegen_func_definition(
 		}, sizeof(struct var_map_entry));
 	}
 
-	codegen_stmt_list(build, &children.l[3], &var_map_copy, func_map);
+	bool terminated = codegen_stmt_list(build, &children.l[3], &var_map_copy, func_map);
+
+	if (!terminated && func_return_type == TYPE_VOID(build))
+		LLVMBuildRetVoid(build);
 
 	struct function_info func_info = {
 		.func = func_ref,
@@ -221,10 +231,58 @@ void codegen_return(
 
 	struct ast_node_list *list = &node->value.children;
 
+	LLVMContextRef llvm_ctx = LLVMGetBuilderContext(build);
+	LLVMBasicBlockRef ret_block = LLVMAppendBasicBlockInContext(
+		llvm_ctx, func_ref, "return"
+	);
+
+	if (list->size == 0) {
+		if (func_return_type != TYPE_VOID_CTX(llvm_ctx)) {
+			fprintf(
+				stderr,
+				"[ERROR] line %zu: return type mismatch: expected %s, got void\n",
+				node->line,
+				value_type_to_str(func_return_type, build)
+			);
+			exit(1);
+		}
+
+		LLVMBuildBr(build, ret_block);
+		LLVMPositionBuilderAtEnd(build, ret_block);
+		LLVMBuildRetVoid(build);
+
+		return;
+	}
+
 	if (list->size != 1 || list->l[0].node_type != AST_EXPR)
 		ERROR_COMPILER();
 
+	LLVMBuildBr(build, ret_block);
+	LLVMPositionBuilderAtEnd(build, ret_block);
+
 	LLVMValueRef value = codegen_expression(build, &list->l[0], var_map, func_map);
+
+	if (func_return_type == TYPE_VOID_CTX(llvm_ctx)) {
+		fprintf(
+			stderr,
+			"[ERROR] line %zu: return type mismatch: expected void, got %s\n",
+			node->line,
+			value_type_to_str(list->l[0].value_type, build)
+		);
+		exit(1);
+	}
+
+	if (func_return_type != list->l[0].value_type) {
+		fprintf(
+			stderr,
+			"[ERROR] line %zu: return type mismatch: expected %s, got %s\n",
+			node->line,
+			value_type_to_str(func_return_type, build),
+			value_type_to_str(list->l[0].value_type, build)
+		);
+		exit(1);
+	}
+
 	LLVMBuildRet(build, value);
 }
 

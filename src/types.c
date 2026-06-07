@@ -78,7 +78,7 @@ LLVMValueRef types_convert_literal(
 wrong_params:
 	fprintf(
 		stderr,
-		"line %zu: function %s accepts 1 number literal parameter\n",
+		"[ERROR] line %zu: function %s accepts 1 number literal parameter\n",
 		node->line, func_name
 	);
 	exit(1);

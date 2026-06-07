@@ -41,7 +41,7 @@ void codegen_continue(
 ) {
 	// if body block is null then the context = {0} => called outside loop
 	if (context.body_block == NULL) {
-		fprintf(stderr, "line %zu: continue outside loop\n", node->line);
+		fprintf(stderr, "[ERROR] line %zu: continue outside loop\n", node->line);
 		exit(1);
 	}
 
@@ -68,7 +68,7 @@ void codegen_break(
 ) {
 	// if body block is null then the context = {0} => called outside loop
 	if (context.body_block == NULL) {
-		fprintf(stderr, "line %zu: break outside loop\n", node->line);
+		fprintf(stderr, "[ERROR] line %zu: break outside loop\n", node->line);
 		exit(1);
 	}
 

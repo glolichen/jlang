@@ -1,12 +1,12 @@
-i64 func(i64 a) {
+void func(i64 a) {
 	if (a == 0) {
-		return 0;
+		putchar(to_i32(50));
+		return;
 	}
-	else {
-		return 1;
-	}
+	putchar(to_i32(49));
 }
 
 i64 main() {
-	return func(2);
+	func(0);
+	return 0;
 }

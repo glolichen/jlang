@@ -9,7 +9,7 @@ _Noreturn void error_compiler(
 ) {
 	fprintf(
 		stderr,
-		"compiler error at %s:%d (function %s)\n",
+		"[ERROR] compiler error at %s:%d (function %s)\n",
 		fname, lineno, fxname
 	);
 	exit(1);

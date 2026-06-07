@@ -297,6 +297,9 @@ static bool parse_return(struct ast_node *node) {
 
 	next();
 
+	if (is_type(LEX_SEMICOLON))
+		return true;
+
 	size_t new_index = ast_insert_node(node, AST_EXPR, get_cur_line());
 	expression(&node->value.children.l[new_index]);
 

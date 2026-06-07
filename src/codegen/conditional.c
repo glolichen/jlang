@@ -160,6 +160,7 @@ static void codegen_conditional_if_then_else(
 }
 
 // will modify var_map using phi nodes
+// return whether to terminate (both branches of if/else terminate)
 void codegen_conditional(
 	LLVMBuilderRef build,
 	struct ast_node *node,

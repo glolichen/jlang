@@ -34,9 +34,6 @@ bool codegen_statement(
 		case AST_VAR_DECLARATION:
 			codegen_var_declaration(build, child, var_map, func_map);
 			return false;
-		case AST_RETURN:
-			codegen_return(build, child, var_map, func_map);
-			return true;
 		case AST_FUNC_CALL:
 			codegen_func_call(build, child, var_map, func_map);
 			return false;
@@ -46,6 +43,9 @@ bool codegen_statement(
 		case AST_FOR:
 			codegen_for_loop(build, child, var_map, func_map);
 			return false;
+		case AST_RETURN:
+			codegen_return(build, child, var_map, func_map);
+			return true;
 		case AST_CONTINUE:
 			codegen_continue(build, child, var_map);
 			return true;
