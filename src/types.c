@@ -50,13 +50,13 @@ LLVMValueRef types_convert_literal(
 	const char *func_name = node->value.children.l[0].value.token.str;
 
 	LLVMTypeRef type;
-	if (strcmp(func_name, "to_i8") == 0)
+	if (strcmp(func_name, "toi8") == 0)
 		type = TYPE_I8(build);
-	else if (strcmp(func_name, "to_i16") == 0)
+	else if (strcmp(func_name, "toi16") == 0)
 		type = TYPE_I16(build);
-	else if (strcmp(func_name, "to_i32") == 0)
+	else if (strcmp(func_name, "toi32") == 0)
 		type = TYPE_I32(build);
-	else if (strcmp(func_name, "to_i64") == 0)
+	else if (strcmp(func_name, "toi64") == 0)
 		type = TYPE_I64(build);
 	else
 		ERROR_COMPILER();

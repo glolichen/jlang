@@ -68,10 +68,10 @@ LLVMValueRef codegen_func_call(
 	const char *func_name = node->value.children.l[0].value.token.str;
 
 	if (
-		strcmp(func_name, "to_i8") == 0 ||
-		strcmp(func_name, "to_i16") == 0 ||
-		strcmp(func_name, "to_i32") == 0 ||
-		strcmp(func_name, "to_i64") == 0
+		strcmp(func_name, "toi8") == 0 ||
+		strcmp(func_name, "toi16") == 0 ||
+		strcmp(func_name, "toi32") == 0 ||
+		strcmp(func_name, "toi64") == 0
 	) {
 		return types_convert_literal(build, node, var_map, func_map);
 	}

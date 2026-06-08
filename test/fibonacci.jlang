@@ -13,26 +13,26 @@ i32 main() {
 	i32 power;
 	i32 digit;
 
-	n = to_i32(0);
-	input = to_i32(48);
-	inputdigits = -to_i32(1);
+	n = toi32(0);
+	input = toi32(48);
+	inputdigits = -toi32(1);
 
-	for (i = to_i32(1000000000); input != to_i32(10); i = i / to_i32(10)) {
-		n = n + i * (input - to_i32(48));
-		inputdigits = inputdigits + to_i32(1);
-		input = to_i32(getchar());
+	for (i = toi32(1000000000); input != toi32(10); i = i / toi32(10)) {
+		n = n + i * (input - toi32(48));
+		inputdigits = inputdigits + toi32(1);
+		input = toi32(getchar());
 	}
 
-	for (i = to_i32(0); i < to_i32(10) - inputdigits - to_i32(1); i = i + to_i32(1)) {
-		n = n / to_i32(10);
+	for (i = toi32(0); i < toi32(10) - inputdigits - toi32(1); i = i + toi32(1)) {
+		n = n / toi32(10);
 	}
 
-	answer = to_i32(1);
-	if (n > to_i32(2)) {
-		prev = to_i32(1);
-		prevprev = to_i32(1);
-		current = to_i32(2);
-		for (i = to_i32(0); i < n - to_i32(3); i = i + to_i32(1)) {
+	answer = toi32(1);
+	if (n > toi32(2)) {
+		prev = toi32(1);
+		prevprev = toi32(1);
+		current = toi32(2);
+		for (i = toi32(0); i < n - toi32(3); i = i + toi32(1)) {
 			next = prev + current;
 			prevprev = prev;
 			prev = current;
@@ -41,28 +41,28 @@ i32 main() {
 		answer = current;
 	}
 	else {
-		if (n <= to_i32(0)) {
-			answer = to_i32(0);
+		if (n <= toi32(0)) {
+			answer = toi32(0);
 		}
 	}
 
-	if (answer == to_i32(0)) {
-		putchar(to_i32(48));
+	if (answer == toi32(0)) {
+		putchar(toi32(48));
 	}
 	else {
-		answerdigits = to_i32(0);
-		maxpower = to_i32(1);
-		for (; maxpower <= answer; maxpower = maxpower * to_i32(10)) { }
+		answerdigits = toi32(0);
+		maxpower = toi32(1);
+		for (; maxpower <= answer; maxpower = maxpower * toi32(10)) { }
 
-		for (power = maxpower / to_i32(10); power >= to_i32(1); power = power / to_i32(10)) {
+		for (power = maxpower / toi32(10); power >= toi32(1); power = power / toi32(10)) {
 			digit = answer / power;
-			putchar(digit + to_i32(48));
+			putchar(digit + toi32(48));
 			answer = answer % power;
 		}
 	}
 
-	putchar(to_i32(10));
+	putchar(toi32(10));
 
-	return to_i32(0);
+	return toi32(0);
 }
 
