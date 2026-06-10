@@ -8,7 +8,7 @@
 
 struct var_map_entry {
 	LLVMValueRef value;
-	LLVMTypeRef type;
+	struct type type;
 };
 
 void codegen_var_declaration(
@@ -24,6 +24,9 @@ void codegen_assignment(
 	struct strmap *var_map,
 	struct strmap *func_map
 );
+
+void codegen_var_strmap_free(struct strmap *func_map);
+
 
 #endif
 

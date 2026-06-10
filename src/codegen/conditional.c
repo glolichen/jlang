@@ -2,7 +2,7 @@
 #include <llvm-c/Types.h>
 
 #include <inttypes.h>
-#include <string.h>
+#include <stdio.h>
 
 #include "codegen/conditional.h"
 #include "codegen/statement.h"
@@ -58,7 +58,9 @@ static void codegen_conditional_if_then(
 				continue;
 			}
 
-			LLVMValueRef phi = LLVMBuildPhi(build, entry_before->type, "ifphitmp");
+			LLVMValueRef phi = LLVMBuildPhi(
+				build, type_to_llvm_type(build, entry_before->type, false), "ifphi"
+			);
 
 			if (!terminated)
 				LLVMAddIncoming(phi, &entry_then->value, &then_block, 1);
@@ -72,6 +74,7 @@ static void codegen_conditional_if_then(
 		}
 	}
 	
+	codegen_var_strmap_free(&var_map_then);
 	strmap_free(&var_map_then);
 }
 
@@ -91,9 +94,9 @@ static void codegen_conditional_if_then_else(
 	LLVMBasicBlockRef else_block = LLVMAppendBasicBlockInContext(
 		llvm_ctx, func, "ifelse"
 	);
-	LLVMBasicBlockRef merge_block = LLVMAppendBasicBlockInContext(
-		llvm_ctx, func, "ifcont"
-	);
+
+	// only generate if both if and else do not terminate
+	LLVMBasicBlockRef merge_block = NULL;
 
 	LLVMBuildCondBr(build, condition, then_block, else_block);
 
@@ -103,8 +106,12 @@ static void codegen_conditional_if_then_else(
 	bool then_terminated = codegen_stmt_list(
 		build, &node->value.children.l[1], &var_map_then, func_map
 	);
-	if (!then_terminated)
+	if (!then_terminated) {
+		merge_block = LLVMAppendBasicBlockInContext(
+			llvm_ctx, func, "ifcont"
+		);
 		LLVMBuildBr(build, merge_block);
+	}
 
 	then_block = LLVMGetInsertBlock(build);
 
@@ -114,8 +121,14 @@ static void codegen_conditional_if_then_else(
 	bool else_terminated = codegen_stmt_list(
 		build, &node->value.children.l[2], &var_map_else, func_map
 	);
-	if (!else_terminated)
+	if (!else_terminated) {
+		if (!merge_block) {
+			merge_block = LLVMAppendBasicBlockInContext(
+				llvm_ctx, func, "ifcont"
+			);
+		}
 		LLVMBuildBr(build, merge_block);
+	}
 
 	else_block = LLVMGetInsertBlock(build);
 
@@ -140,7 +153,9 @@ static void codegen_conditional_if_then_else(
 				continue;
 			}
 
-			LLVMValueRef phi = LLVMBuildPhi(build, entry_cur->type, "ifelsephitmp");
+			LLVMValueRef phi = LLVMBuildPhi(
+				build, type_to_llvm_type(build, entry_cur->type, false), "ifelsephi"
+			);
 
 			if (!then_terminated)
 				LLVMAddIncoming(phi, &entry_then->value, &then_block, 1);
@@ -155,7 +170,10 @@ static void codegen_conditional_if_then_else(
 		}
 	}
 	
+	codegen_var_strmap_free(&var_map_then);
 	strmap_free(&var_map_then);
+
+	codegen_var_strmap_free(&var_map_else);
 	strmap_free(&var_map_else);
 }
 
@@ -187,8 +205,10 @@ void codegen_conditional(
 
 	condition = LLVMBuildICmp(
 		build, LLVMIntNE, condition,
-		LLVMConstInt(node->value.children.l[0].value_type, 0, 0),
-		"ifcmptmp"
+		LLVMConstInt(
+			type_to_llvm_type(build, node->value.children.l[0].value_type, false), 0, 0
+		),
+		"ifcmp"
 	);
 
 	// 2 = no else (if then)

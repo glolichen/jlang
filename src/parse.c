@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 #include "lex.h"
 #include "parse.h"
@@ -16,11 +17,11 @@ static const enum lex_token_type COMP_OPS[] = {
 };
 static const size_t COMP_OPS_SIZE = sizeof(COMP_OPS) / sizeof(COMP_OPS[0]);
 
-static const enum lex_token_type TYPES[] = {
+static const enum lex_token_type BASE_TYPES[] = {
 	LEX_I8, LEX_I16, LEX_I32, LEX_I64,
 	// LEX_U8, LEX_U16, LEX_U32, LEX_U64
 };
-static const size_t TYPES_SIZE = sizeof(TYPES) / sizeof(TYPES[0]);
+static const size_t BASE_TYPES_SIZE = sizeof(BASE_TYPES) / sizeof(BASE_TYPES[0]);
 
 static const char **line_list;
 static struct lex_token_list token_list;
@@ -121,6 +122,28 @@ static void expr_no_comp(struct ast_node *node);
 static void expression(struct ast_node *node);
 
 static bool func_call(struct ast_node *node);
+
+static bool type(struct ast_node *node) {
+	while (is_type(LEX_PTR)) {
+		ast_insert_leaf(node, get_cur(), get_cur_line());
+		next();
+	}
+
+	if (is_type(LEX_VOID)) {
+		fprintf(stderr, "[ERROR] void pointers are not allowed\n");
+		fprintf(stderr, "line %zu: ", get_cur_line());
+		print_cur_no_prefix(stderr);
+		longjmp(error_buf, 1);
+	}
+
+	if (!is_types(BASE_TYPES, BASE_TYPES_SIZE))
+		return false;
+
+	ast_insert_leaf(node, get_cur(), get_cur_line());
+	next();
+
+	return true;
+}
 
 static void factor(struct ast_node *node) {
 	size_t start_index = current_index;
@@ -250,19 +273,14 @@ static bool assignment(struct ast_node *node) {
 }
 
 static bool var_declaration(struct ast_node *node) {
-	if (!is_types(TYPES, TYPES_SIZE))
+	size_t new_index = ast_insert_node(node, AST_TYPE, get_cur_line());
+	if (!type(&node->value.children.l[new_index])) {
+		ast_remove_node(node, new_index);
 		return false;
-	next();
+	}
+
 	if (!is_type(LEX_IDENTIFIER))
 		return false;
-
-	// move back
-	prev();
-
-	// insert type (such as i32)
-	ast_insert_leaf(node, get_cur(), get_cur_line());
-
-	next();
 
 	// insert identifier
 	ast_insert_leaf(node, get_cur(), get_cur_line());
@@ -488,11 +506,11 @@ static bool func_param_list(struct ast_node *node) {
 	}
 
 	while (true) {
-		if (!is_types(TYPES, TYPES_SIZE))
-			break;
-
-		ast_insert_leaf(node, get_cur(), get_cur_line());
-		next();
+		size_t new_index = ast_insert_node(node, AST_TYPE, get_cur_line());
+		if (!type(&node->value.children.l[new_index])) {
+			ast_remove_node(node, new_index);
+			return false;
+		}
 
 		if (!is_type(LEX_IDENTIFIER))
 			break;
@@ -514,11 +532,17 @@ static bool func_param_list(struct ast_node *node) {
 }
 
 static bool func_definition(struct ast_node *node) {
-	if (!is_types(TYPES, TYPES_SIZE) && !is_type(LEX_VOID))
-		return false;
-
-	ast_insert_leaf(node, get_cur(), get_cur_line());
-	next();
+	size_t new_index = ast_insert_node(node, AST_TYPE, get_cur_line());
+	if (is_type(LEX_VOID)) {
+		ast_insert_leaf(&node->value.children.l[new_index], get_cur(), get_cur_line());
+		next();
+	}
+	else {
+		if (!type(&node->value.children.l[new_index])) {
+			ast_remove_node(node, new_index);
+			return false;
+		}
+	}
 
 	if (!is_type(LEX_IDENTIFIER))
 		return false;
@@ -526,7 +550,7 @@ static bool func_definition(struct ast_node *node) {
 	ast_insert_leaf(node, get_cur(), get_cur_line());
 	next();
 
-	size_t new_index = ast_insert_node(node, AST_FUNC_PARAM_LIST, get_cur_line());
+	new_index = ast_insert_node(node, AST_FUNC_PARAM_LIST, get_cur_line());
 	if (!func_param_list(&node->value.children.l[new_index]))
 		return false;
 

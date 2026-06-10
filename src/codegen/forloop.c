@@ -160,8 +160,10 @@ void codegen_for_loop(
 
 		end_condition = LLVMBuildICmp(
 			build, LLVMIntNE, end_condition,
-			LLVMConstInt(node->value.children.l[1].value_type, 0, 0),
-			"forcmptmp"
+			LLVMConstInt(
+				type_to_llvm_type(build, node->value.children.l[1].value_type, false), 0, 0
+			),
+			"forcmp"
 		);
 	}
 	// if satisfies condition, run loop
@@ -183,7 +185,9 @@ void codegen_for_loop(
 			// value before = value from before the for loop
 			struct var_map_entry entry_before = *(struct var_map_entry *) cur_before->value;
 
-			LLVMValueRef phi = LLVMBuildPhi(build, entry_before.type, "forbodyphitmp");
+			LLVMValueRef phi = LLVMBuildPhi(
+				build, type_to_llvm_type(build, entry_before.type, false), "forbodyphi"
+			);
 
 			// if predecessor to current block is the before_block, this is the first iteration
 			// then need to use the value_before (this is how a phi node works)
@@ -218,7 +222,9 @@ void codegen_for_loop(
 		while (cur_main_loop != NULL) {
 			struct var_map_entry *entry_main = strmap_get(&var_map_loop, cur_main_loop->str);
 
-			LLVMValueRef phi = LLVMBuildPhi(build, entry_main->type, "forcondphitmp");
+			LLVMValueRef phi = LLVMBuildPhi(
+				build, type_to_llvm_type(build, entry_main->type, false), "forcondphi"
+			);
 
 			LLVMAddIncoming(phi, &entry_main->value, &main_loop_body_end_block, 1);
 
@@ -259,8 +265,10 @@ void codegen_for_loop(
 
 		end_condition = LLVMBuildICmp(
 			build, LLVMIntNE, end_condition,
-			LLVMConstInt(node->value.children.l[1].value_type, 0, 0),
-			"forcmptmp"
+			LLVMConstInt(
+				type_to_llvm_type(build, node->value.children.l[1].value_type, false), 0, 0
+			),
+			"forcmp"
 		);
 	}
 	// ... whether to execute again (branch to loop body block again)
@@ -303,8 +311,8 @@ void codegen_for_loop(
 			// if it did, it is the loop_block_end
 			LLVMValueRef phi = LLVMBuildPhi(
 				build,
-				entry_before->type,
-				"forafterphitmp"
+				type_to_llvm_type(build, entry_before->type, false),
+				"forafterphi"
 			);
 
 			LLVMAddIncoming(phi, &entry_before->value, &before_block, 1);
@@ -335,22 +343,26 @@ void codegen_for_loop(
 	cur = context.break_statements;
 	while (cur != NULL) {
 		struct break_cont_stmt *cur_break = cur->data;
+		codegen_var_strmap_free(&cur_break->var_map);
 		strmap_free(&cur_break->var_map);
 		free(cur_break);
 		cur = cur->next;
 	}
 	cur = context.continue_statements;
 	while (cur != NULL) {
-		struct break_cont_stmt *cur_break = cur->data;
-		strmap_free(&cur_break->var_map);
-		free(cur_break);
+		struct break_cont_stmt *cur_continue = cur->data;
+		codegen_var_strmap_free(&cur_continue->var_map);
+		strmap_free(&cur_continue->var_map);
+		free(cur_continue);
 		cur = cur->next;
 	}
 
 	if (loop_assign_var != NULL && !loop_var_already_defined)
 		strmap_remove(var_map, loop_assign_var, false);
 
+	codegen_var_strmap_free(&var_map_loop);
 	strmap_free(&var_map_loop);
+
 	strmap_free(&loop_phi_nodes);
 
 	ll_free(&context.break_statements);

@@ -5,10 +5,8 @@
 #include "utils/strmap.h"
 #include "ast.h"
 
-void codegen_func_init(
-	LLVMContextRef llvm_ctx,
-	struct strmap *func_map
-);
+void codegen_func_init(LLVMBuilderRef build, struct strmap *func_map);
+void codegen_func_free(struct strmap *func_map);
 
 LLVMValueRef codegen_func_call(
 	LLVMBuilderRef build,

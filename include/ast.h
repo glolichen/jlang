@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include "types.h"
 #include "lex.h"
+#include "utils/linkedlist.h"
 
 enum ast_node_type {
 	AST_ROOT,
@@ -24,6 +25,7 @@ enum ast_node_type {
 	AST_RETURN,
 	AST_CONTINUE,
 	AST_BREAK,
+	AST_TYPE,
 	AST_FUNC_PARAM_LIST,
 	AST_FUNC_DEFINITION,
 	AST_GLOBAL_DECL_DEF,
@@ -40,7 +42,7 @@ union ast_node_value {
 struct ast_node {
 	enum ast_node_type node_type;
 
-	LLVMTypeRef value_type;
+	struct type value_type;
 
 	// terminals are lex_token, nonterminals are list of ast_node
 	// i.e. if type is AST_LEAF, then "value" is lex_token
@@ -55,7 +57,6 @@ void ast_free_node(struct ast_node *node);
 
 struct ast_node_list ast_new_node_list(void);
 void ast_node_list_append(struct ast_node_list *list, struct ast_node token);
-void ast_free_node_list(struct ast_node_list *list);
 
 size_t ast_insert_node(struct ast_node *node, enum ast_node_type type, size_t line);
 size_t ast_insert_leaf(struct ast_node *node, const struct lex_token *token, size_t line);

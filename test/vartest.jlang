@@ -1,12 +1,4 @@
-void func(i64 a) {
-	if (a == 0) {
-		putchar(toi32(50));
-		return;
-	}
-	putchar(toi32(49));
-}
-
 i64 main() {
-	func(0);
-	return 0;
+	ptr i64 a;
+	return a;
 }

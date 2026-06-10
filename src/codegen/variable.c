@@ -27,20 +27,20 @@ void codegen_var_declaration(
 
 	if (
 		list->size != 2 ||
-		list->l[0].node_type != AST_LEAF ||
+		list->l[0].node_type != AST_TYPE ||
 		list->l[1].node_type != AST_LEAF
 	) {
 		ERROR_COMPILER();
 	}
 
-	const enum lex_token_type lex_type = list->l[0].value.token.type;
-	const struct lex_token *ident = &list->l[1].value.token;
+	struct type type = type_from_ast_node(&list->l[0], false);
+	LLVMTypeRef llvm_type = type_to_llvm_type(build, type, false);
 
-	LLVMTypeRef llvm_type = type_from_lex(build, lex_type, false);
+	const struct lex_token *ident = &list->l[1].value.token;
 
 	struct var_map_entry rhs = {
 		.value = LLVMConstInt(llvm_type, 0, 0),
-		.type = llvm_type
+		.type = type
 	};
 
 	strmap_set(var_map, ident->str, &rhs, sizeof(struct var_map_entry));
@@ -73,16 +73,27 @@ void codegen_assignment(
 		);
 		exit(1);
 	}
-	if (entry->type != list->l[1].value_type) {
+	if (!type_eq(entry->type, list->l[1].value_type)) {
 		fprintf(
 			stderr,
 			"[ERROR] line %zu: type mismatch: expected %s, got %s\n",
 			node->line,
-			value_type_to_str(entry->type, build),
-			value_type_to_str(list->l[1].value_type, build)
+			type_to_str(entry->type),
+			type_to_str(list->l[1].value_type)
 		);
 		exit(1);
 	}
 	entry->value = rhs;
+}
+
+void codegen_var_strmap_free(struct strmap *var_map) {
+	for (uint64_t i = 0; i < var_map->bucket_count; i++) {
+		struct strmap_list_node *node = var_map->list[i];
+		while (node != NULL) {
+			struct var_map_entry var = *(struct var_map_entry *) node->value;
+			type_free(&var.type);
+			node = node->next;
+		}
+	}
 }
 

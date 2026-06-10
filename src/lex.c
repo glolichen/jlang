@@ -115,6 +115,8 @@ const char *lex_token_type_to_str(enum lex_token_type type) {
 			return "CONTINUE";
 		case LEX_BREAK:
 			return "BREAK";
+		case LEX_PTR:
+			return "PTR";
 		case LEX_I8:
 			return "I8";
 		case LEX_I16:
@@ -158,6 +160,8 @@ static enum lex_token_type str_to_keyword(const char *str) {
 		return LEX_CONTINUE;
 	if (strcmp(str, "break") == 0)
 		return LEX_BREAK;
+	if (strcmp(str, "ptr") == 0)
+		return LEX_PTR;
 	if (strcmp(str, "i8") == 0)
 		return LEX_I8;
 	if (strcmp(str, "i16") == 0)

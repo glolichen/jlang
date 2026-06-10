@@ -5,6 +5,7 @@
 #include "ast.h"
 #include "lex.h"
 #include "types.h"
+#include "utils/linkedlist.h"
 
 static const char *ast_node_type_to_str(enum ast_node_type type) {
 	switch (type) {
@@ -42,6 +43,8 @@ static const char *ast_node_type_to_str(enum ast_node_type type) {
 			return "CONTINUE";
 		case AST_BREAK:
 			return "BREAK";
+		case AST_TYPE:
+			return "TYPE";
 		case AST_FUNC_PARAM_LIST:
 			return "FUNC_PARAM_LIST";
 		case AST_FUNC_DEFINITION:
@@ -58,16 +61,24 @@ struct ast_node ast_new_node(enum ast_node_type type) {
 	return (struct ast_node) {
 		.value.children = ast_new_node_list(),
 		.node_type = type,
-		.value_type = NULL,
+		.value_type = { 0 },
 		.line = 0
 	};
+}
+
+void ast_free_node_list(struct ast_node_list *list) {
+	for (size_t i = 0; i < list->size; i++)
+		ast_free_node(&list->l[i]);
+	free(list->l);
+	list->capacity = 0, list->size = 0;
 }
 
 // will free all lex_token's under the node/tree
 // those tokens will be set to NULL so that they are not freed again
 void ast_free_node(struct ast_node *node) {
-	if (node->node_type == AST_LEAF) 
-	{
+
+	type_free(&node->value_type);
+	if (node->node_type == AST_LEAF) {
 		// lex_free_token(&node->value.token);
 	}
 	else
@@ -96,13 +107,6 @@ void ast_node_list_append(struct ast_node_list *list, struct ast_node node) {
 	list->l[list->size++] = node;
 }
 
-void ast_free_node_list(struct ast_node_list *list) {
-	for (size_t i = 0; i < list->size; i++)
-		ast_free_node(&list->l[i]);
-	free(list->l);
-	list->capacity = 0, list->size = 0;
-}
-
 // TODO: Safety -- if current node type is terminal, do not allow this
 // if adding node type is terminal, use insert_leaf instead
 size_t ast_insert_node(struct ast_node *node, enum ast_node_type type, size_t line) {
@@ -111,11 +115,12 @@ size_t ast_insert_node(struct ast_node *node, enum ast_node_type type, size_t li
 
 	struct ast_node_list *list = &node->value.children;
 
-	struct ast_node new_node;
-	new_node.node_type = type;
-	new_node.value.children = ast_new_node_list();
-	new_node.value_type = NULL;
-	new_node.line = line;
+	struct ast_node new_node = {
+		.node_type = type,
+		.value.children = ast_new_node_list(),
+		.value_type = { 0 },
+		.line = line
+	};
 	ast_node_list_append(list, new_node);
 
 	return list->size - 1;
@@ -127,11 +132,12 @@ size_t ast_insert_leaf(struct ast_node *node, const struct lex_token *token, siz
 
 	struct ast_node_list *list = &node->value.children;
 
-	struct ast_node new_node;
-	new_node.node_type = AST_LEAF;
-	new_node.value.token = *token;
-	new_node.value_type = NULL;
-	new_node.line = line;
+	struct ast_node new_node = {
+		.node_type = AST_LEAF,
+		.value.token = *token,
+		.value_type = { 0 },
+		.line = line
+	};
 	ast_node_list_append(list, new_node);
 
 	return list->size - 1;

@@ -19,9 +19,9 @@ LLVMValueRef codegen_number(
 	LLVMContextRef llvm_ctx,
 	struct ast_node *node
 ) {
-	node->value_type = TYPE_I64_CTX(llvm_ctx);
+	node->value_type = (struct type) { .kind = TYPE_I64 };
 	return LLVMConstInt(
-		TYPE_I64_CTX(llvm_ctx),
+		LLVMInt64TypeInContext(llvm_ctx),
 		node->value.token.literal.number, 0
 	);
 }
@@ -80,7 +80,7 @@ LLVMValueRef codegen_term(
 
 	struct ast_node_list *list = &node->value.children;
 	LLVMValueRef lhs = codegen_factor(build, &list->l[0], var_map, func_map);
-	LLVMTypeRef type = list->l[0].value_type;
+	struct type type = list->l[0].value_type;
 
 	size_t i;
 	for (i = 1; i < list->size - 1; i += 2) {
@@ -88,26 +88,26 @@ LLVMValueRef codegen_term(
 			ERROR_COMPILER();
 
 		LLVMValueRef rhs = codegen_factor(build, &list->l[i + 1], var_map, func_map);
-		if (list->l[i + 1].value_type != type) {
+		if (!type_eq(list->l[i + 1].value_type, type)) {
 			fprintf(
 				stderr,
 				"[ERROR] line %zu: type mismatch: expected %s, got %s\n",
 				node->line,
-				value_type_to_str(type, build),
-				value_type_to_str(list->l[i + 1].value_type, build)
+				type_to_str(type),
+				type_to_str(list->l[i + 1].value_type)
 			);
 			exit(1);
 		}
 
 		switch (list->l[i].value.token.type) {
 			case LEX_STAR:
-				lhs = LLVMBuildMul(build, lhs, rhs, "multmp");
+				lhs = LLVMBuildMul(build, lhs, rhs, "mul");
 				break;
 			case LEX_SLASH:
-				lhs = LLVMBuildSDiv(build, lhs, rhs, "divtmp");
+				lhs = LLVMBuildSDiv(build, lhs, rhs, "div");
 				break;
 			case LEX_PERCENT:
-				lhs = LLVMBuildSRem(build, lhs, rhs, "modtmp");
+				lhs = LLVMBuildSRem(build, lhs, rhs, "mod");
 				break;
 			default:
 				ERROR_COMPILER();
@@ -141,14 +141,13 @@ LLVMValueRef codegen_expr_no_comp(
 	}
 
 	LLVMValueRef lhs = codegen_term(build, &list->l[i], var_map, func_map);
-	LLVMTypeRef type = list->l[i].value_type;
+	struct type type = list->l[i].value_type;
 
-	// WARN: possible that needs different integer type depending on type
 	if (first_is_negative) {
 		lhs = LLVMBuildMul(
 			build, lhs,
-			LLVMConstInt(list->l[i].value_type, -1, 0),
-			"negtmp"
+			LLVMConstInt(type_to_llvm_type(build, list->l[i].value_type, false), -1, 0),
+			"neg"
 		);
 	}
 
@@ -157,21 +156,21 @@ LLVMValueRef codegen_expr_no_comp(
 			ERROR_COMPILER();
 
 		LLVMValueRef rhs = codegen_term(build, &list->l[i + 1], var_map, func_map);
-		if (list->l[i + 1].value_type != type) {
+		if (!type_eq(list->l[i + 1].value_type,type)) {
 			fprintf(
 				stderr,
 				"[ERROR] line %zu: type mismatch: expected %s, got %s\n",
 				node->line,
-				value_type_to_str(type, build),
-				value_type_to_str(list->l[i + 1].value_type, build)
+				type_to_str(type),
+				type_to_str(list->l[i + 1].value_type)
 			);
 			exit(1);
 		}
 
 		if (list->l[i].value.token.type == LEX_PLUS)
-			lhs = LLVMBuildAdd(build, lhs, rhs, "addtmp");
+			lhs = LLVMBuildAdd(build, lhs, rhs, "add");
 		else if (list->l[i].value.token.type == LEX_MINUS)
-			lhs = LLVMBuildSub(build, lhs, rhs, "subtmp");
+			lhs = LLVMBuildSub(build, lhs, rhs, "sub");
 	}
 
 	if (i != list->size)
@@ -206,18 +205,18 @@ LLVMValueRef codegen_expression(
 	enum lex_token_type comp_type = list->l[1].value.token.type;
 	LLVMValueRef rhs = codegen_expr_no_comp(build, &list->l[2], var_map, func_map);
 
-	if (list->l[0].value_type != list->l[2].value_type) {
+	if (!type_eq(list->l[0].value_type, list->l[2].value_type)) {
 		fprintf(
 			stderr,
 			"[ERROR] line %zu: type mismatch: expected %s, got %s\n",
 			node->line,
-			value_type_to_str(list->l[0].value_type, build),
-			value_type_to_str(list->l[2].value_type, build)
+			type_to_str(list->l[0].value_type),
+			type_to_str(list->l[2].value_type)
 		);
 		exit(1);
 	}
 
-	LLVMTypeRef type = list->l[0].value_type;
+	struct type type = list->l[0].value_type;
 
 	LLVMIntPredicate comp_pred;
 	switch (comp_type) {
@@ -243,8 +242,11 @@ LLVMValueRef codegen_expression(
 			ERROR_COMPILER();
 	}
 
-	LLVMValueRef bool_value = LLVMBuildICmp(build, comp_pred, lhs, rhs, "cmptmp");
+	LLVMValueRef bool_value = LLVMBuildICmp(build, comp_pred, lhs, rhs, "cmp");
 	node->value_type = type;
-	return LLVMBuildIntCast2(build, bool_value, type, false, "cmptmp2");
+
+	return LLVMBuildIntCast2(
+		build, bool_value, type_to_llvm_type(build, type, false), false, "cmp2"
+	);
 }
 

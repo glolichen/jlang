@@ -13,7 +13,7 @@
 #include "codegen/codegen.h"
 #include "codegen/function.h"
 #include "codegen/master.h"
-#include "codegen/statement.h"
+#include "codegen/variable.h"
 #include "utils/strmap.h"
 #include "ast.h"
 
@@ -31,8 +31,10 @@ bool codegen(const char *name, struct ast_node *root) {
     LLVMBuilderRef build = LLVMCreateBuilderInContext(llvm_ctx);
 
 	struct strmap var_map = strmap_new(), func_map = strmap_new();
-	codegen_func_init(llvm_ctx, &func_map);
+	codegen_func_init(build, &func_map);
 	codegen_master(module, build, &root->value.children.l[0], &var_map, &func_map);
+
+	LLVMPrintModuleToFile(module, "file.ll", NULL);
 
 	char *error = NULL;
 	LLVMVerifyModule(module, LLVMAbortProcessAction, &error);
@@ -49,6 +51,10 @@ bool codegen(const char *name, struct ast_node *root) {
 		fprintf(stderr, "error writing bitcode to file, skipping\n");
 
 	free(bitcode_filename);
+
+	codegen_var_strmap_free(&var_map);
+	codegen_func_free(&func_map);
+
 	strmap_free(&var_map);
 	strmap_free(&func_map);
 

@@ -8,6 +8,7 @@
 #include "ast.h"
 #include "parse.h"
 #include "codegen/codegen.h"
+#include "types.h"
 
 size_t count_lines(FILE *file) {
 	size_t lines = 0;
@@ -122,6 +123,7 @@ int main(int argc, const char *argv[]) {
 	}
 
 	ast_free_node(&root);
+	type_free_list();
 	// lex_free_token_list(&token_list);
 
 	for (size_t i = 0; i <= line_counter; i++)

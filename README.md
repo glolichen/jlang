@@ -41,8 +41,8 @@ Compiler (LLVM frontend) for very minimal C-like language. Compiles to LLVM IR.
 
 <var_declaration> ::= <type> identifier
 
-<type> ::= "i8" | "i16" | "i32" | "i64"
-     // |  "u8" | "u16" | "u32" | "u64" (no unsigned integers for now)
+// (no unsigned integers for now)
+<type> ::= { "ptr" } ("i8"|"i16"|"i32"|"i64")
 
 <func_param_list> ::= "(" { <type> identifier "," } <type> identifier ")"
                    |  "()"
@@ -77,6 +77,8 @@ Didn't bother with inheritance (AST node is just a list of children).
 ## Implementation Notes
 
  - Numerical literals are 64 bit by default, need to be casted explicitly
+ - Assumes 64-bit architecture (pointer arithmetic is 64 bit)
+ - No void pointers
  - Comparisons must be between two variables of the same type, returns an integer of that type
 
 ## Known Bugs
